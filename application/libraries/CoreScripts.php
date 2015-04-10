@@ -67,6 +67,11 @@ class CoreScripts {
 		return true;
 	}
 	
+	function format_Number($phoneNumber) {
+		$formatedNumber = "+254" . substr ( $phoneNumber, 1 );
+		return $formatedNumber;
+	}
+	
 	/* Africa Is Talking SMS-Sending */
 	function _send_sms2($phoneNumber, $message) {
 		if ($phoneNumber == "") {

@@ -43,7 +43,7 @@ class Member_Model extends CI_Model {
 	}
 	function getOwner_by_id($businessNo) {
 		$query = $this->db->query ( "select businessName,phoneNo from TillModel" . " where business_number='" . $businessNo . "'" );
-
+		
 		if ($query->num_rows () > 0) {
 			return $query->row_array ();
 		} else {
@@ -54,6 +54,7 @@ class Member_Model extends CI_Model {
 	 * Total for a single Till
 	 */
 	function getTillTotal($businessNo) {
+		$this->db->query ( 'Use mobileBanking' );
 		$this->db->select_sum ( 'mpesa_amt' );
 		$this->db->where ( array (
 				'business_number' => $businessNo,
@@ -93,5 +94,35 @@ class Member_Model extends CI_Model {
 			array_push ( $response, $data );
 		}
 		return $response;
+	}
+	function getTransactedMerchants() {
+		
+		// Daily
+		$date = date ( "d/m/Y" );
+		$explodedDate = explode ( '/', $date );
+		$day = $explodedDate [0];
+		$month = $explodedDate [1];
+		$year = $explodedDate [2];
+		
+		$day = '02';
+		$month = '01';
+		
+		$query = "select DISTINCT(transactions.business_number),tills.ownerId,users.phone,users.firstName, clientdoc.clientcode" . " from LipaNaMpesaIPN as transactions " . " Inner Join TillModel as tills ON (transactions.business_number=tills.business_number)" . " Inner Join BUser as users ON (tills.ownerId=users.userId)" . " Inner Join MergeFinals.dbo.clientdoc as clientdoc ON(tills.business_number=clientdoc.docnum)" . " where DATEPART(YYYY,tstamp)='" . $year . "' and" . " DATEPART(MM,tstamp)='" . $month . "' and " . " DATEPART(DD,tstamp)='" . $day . "'
+				";
+		
+		//echo $query;
+		
+		$query = $this->db->query ( $query );
+		$output = $query->result_array ();
+		
+		//print_r ( $output );
+		
+		return $output;
+	}
+	function getCustTransaction($customerId, $transactionId) {
+		$this->db->query ( 'Use MergeFinals' );
+		$rs = $this->db->query ( 'SELECT Dbo.SP_GetBalances(\'' . $customerId . '\',' . $transactionId . ') AS balance' );
+		$balance = $rs->row ()->balance;
+		return $balance;
 	}
 }
