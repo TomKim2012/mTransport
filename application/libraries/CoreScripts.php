@@ -73,7 +73,7 @@ class CoreScripts {
 	}
 	
 	/* Africa Is Talking SMS-Sending */
-	function _send_sms2($phoneNumber, $message) {
+	function _send_sms2($phoneNumber, $message, $alphaNumeric) {
 		if ($phoneNumber == "") {
 			return array (
 					'error' => "Message not sent, No phoneNumber passed" 
@@ -83,7 +83,7 @@ class CoreScripts {
 		
 		// Create an instance of the gateway class
 		$username = "TomKim";
-		$shortCode = "PioneerFSA";
+		$shortCode = $alphaNumeric;
 		$apiKey = "1473c117e56c4f2df393c36dda15138a57b277f5683943288c189b966aae83b4";
 		$gateway = new AfricasTalkingGateway ( $username, $apiKey );
 		
