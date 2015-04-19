@@ -56,8 +56,7 @@ class Paybill extends CI_Controller {
 
 			//Send message to customer who deposited.
 			$message ="Dear ". $firstName .", MPESA deposit of ". $inp['mpesa_amt'].
-					" confirmed. Invest as low as Ksh 5000 in our fixed deposit ".
-					"or real estate fund and get upto 18% guaranteed returns.";
+					"Own a Prime Plot in Ruiru with a deposit of  KSh.50k and 25k monthly Installment for 24 Months. 0705300035";
 			$sms_feedback = $this->corescripts->_send_sms2 ($phoneNumber, $message);
 
 		} else {
@@ -91,9 +90,9 @@ class Paybill extends CI_Controller {
 				$till = $this->members->getOwner_by_id ( $inp ['business_number'] );
 				$balance = $this->members->getTillTotal ( $inp ['business_number'] );
 				
-				$message = "Dear " . $this->truncateString( $till ['businessName'] ) . ", transaction " . $inp ['mpesa_code'] . " of Kshs. " 
+				$message =$this->truncateString( $till ['businessName'] ) . ", " . $inp ['mpesa_code'] . " of Kes " 
 						. number_format ( $inp ['mpesa_amt'] ) . " received from " . $this->truncateString($inp ['mpesa_sender']) 
-						. " on " . $tDate . " at " . $tTime . ". New Till balance is Ksh " . $balance;
+						." on " . $tDate . " at " . $tTime . ".New Till balance is Ksh " . $balance.".Helpline 0705300035";
 				
 				// echo $message;
 				if ($till ['phoneNo']) {
