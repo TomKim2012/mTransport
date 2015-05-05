@@ -10,8 +10,7 @@ class Paybill extends CI_Controller {
 		$this->load->model ( 'Member_model', 'members' );
 		$this->load->helper ( 'file' );
 	}
-	function index() {
-		
+	function index() {	
 		/**
 		 * Extract IPN Parameters
 		 */

@@ -128,12 +128,12 @@ class Paybill_model extends CI_Model {
 		
 		// Confirm its not a duplicate
 		$this->db->where ( 'verification_code', $randomString );
-		$query = $this->db->get ( 'Verifications' );
-		if ($query->num_rows () > 0) {
-			random_string ( $length );
-		} else {
-			return $randomString;
-		}
+// 		$query = $this->db->get ( 'Verifications' );
+// 		if ($query->num_rows () > 0) {
+// 			random_string ( $length );
+// 		} else {
+// 			return $randomString;
+// 		}
 	}
 }
 ?>
