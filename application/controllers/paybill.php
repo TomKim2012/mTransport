@@ -73,10 +73,13 @@ class Paybill extends CI_Controller {
 				$message =$this->truncateString( $till ['businessName'] ) . ", " . $parameters ['mpesa_code'] . " of Kes " 
 						. number_format ( $parameters ['mpesa_amt'] ) . " received from " . $this->truncateString($parameters ['mpesa_sender']) 
 						." on " . $tDate . " at " . $tTime . ".New Till balance is Ksh " . $balance.".Helpline 0705300035";
+				
 				$getipnaddress = $this->transaction->getipnaddress ( $parameters ['business_number'] );
 				
 				if (! empty ( $getipnaddress )) {
-					$this->performClientIPN ( $getipnaddress, $parameters );
+					echo "performed IPN";
+					print_r($getipnaddress);
+					//$this->performClientIPN ( $getipnaddress, $parameters );
 				}
 				$this->prepareTillMessage ( $parameters );
 			} else {
