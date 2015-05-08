@@ -34,6 +34,25 @@ class Paybill extends CI_Controller {
 		$pass = $this->input->get ( 'pass' );
 		
 		/**
+		 * **********************************
+		 */
+		if ($Parameters ['business_number'] == '510513' || $parameters ['business_number'] == '510512') {
+			$firstName = $this->getFirstName ( $parameters ['mpesa_sender'] ); // JOASH NYADUNDO
+			$phoneNumber = $this->format_number ( $parameters ['mpesa_msisdn'] );
+			
+			// Send message to customer who deposited.
+			$message = "Dear " . $firstName . ", MPESA deposit of " . $parameters ['mpesa_amt'] . "Own a Prime Plot in Ruiru with a deposit of  KSh.50k and 25k monthly Installment for 24 Months. 0705300035";
+			$sms_feedback = $this->corescripts->_send_sms2 ( $phoneNumber, $message );
+		} else {
+			/*
+			 * Should be sorted asap
+			 * we are making account number to be the same as business number because Pioneer's integration does not take
+			 * into consideration empty account Number;
+			 */
+			$parameters ['mpesa_acc'] = $parameters ['business_number'];
+		}
+		
+		/**
 		 * Saving Parameters on successful Authentication
 		 */
 		if (($user == 'pioneerfsa' && $pass == 'financial@2013') || ($user = 'mTransport' && $pass = 'transport@2014')) {
@@ -54,13 +73,12 @@ class Paybill extends CI_Controller {
 				if (! empty ( $ipnAddress )) {
 					// $this->performClientIPN ( $getipnaddress, $parameters );
 				}
-
-				//Owner's Message
+				
+				// Owner's Message
 				$this->prepareOwnerMessage ( $parameters );
 				if ($alphaNumeric->allowCustomerSMS) {
 					$this->prepareCustomerMessage ( $parameters );
 				}
-				
 			} else {
 				echo "FAIL|No transaction details were sent";
 			}
@@ -98,7 +116,7 @@ class Paybill extends CI_Controller {
 		$till = $this->members->getOwner_by_id ( $parameters ['business_number'] );
 		
 		$message = "Dear " . $this->truncateString ( $parameters ['mpesa_sender'] ) . ", your MPESA payment of KES " . number_format ( $parameters ['mpesa_amt'] ) . " received.Use Verification code " . $parameters ['verificationCode'] . ".Thank-you for your business.";
-		//echo $message;
+		// echo $message;
 		
 		if ($parameters ['mpesa_msisdn']) {
 			$phone = $this->format_IPNnumber ( $parameters ['mpesa_msisdn'] );
