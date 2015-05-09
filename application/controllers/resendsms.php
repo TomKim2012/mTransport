@@ -6,13 +6,13 @@ class ResendSms extends CI_Controller {
 	function ResendSms() {
 		parent::__construct ();
 		$this->load->model ( 'resendSms_model' );
-		
 		$this->load->library ( 'CoreScripts' );
 	}
+	var $count=0;
+	
 	function index() {
 		$data = $this->resendSms_model->getFailed ();
 		
-//		print_r($data);
 		/*
 		 * checks of there are messages that require being resent
 		 */
@@ -25,10 +25,9 @@ class ResendSms extends CI_Controller {
 				$messageId = ($row->messageId);
 				$messageStatus = ($row->status);
 
-				$this->send_sms ( $phoneNo, $message, $mpesaCode );			
-				
+				$this->send_sms ( '0713449301', $message, $mpesaCode );			
 			}
-			
+			echo "Messages sent are:" .$this->count;
 		}
 		
 		else{
@@ -36,9 +35,8 @@ class ResendSms extends CI_Controller {
 		}
 	
 	}
+	
 	function send_sms($phoneNo, $message, $mpesaCode) {
-		echo $message;
-		
 		$smsInput = $this->corescripts->_send_sms2 ( $phoneNo, $message, "PioneerFSA" );
 		$transactionId = $mpesaCode;
 		$messageId = $smsInput['messageId'];
@@ -47,6 +45,7 @@ class ResendSms extends CI_Controller {
 //		echo "messageId>>".$messageId."status>>".$status;
 
 		$this->resendSms_model->updateSMS($messageId, $status, $transactionId);
-
+		$this->count = count+1;
+		
 	}
 }
