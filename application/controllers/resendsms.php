@@ -25,7 +25,7 @@ class ResendSms extends CI_Controller {
 				$messageId = ($row->messageId);
 				$messageStatus = ($row->status);
 
-				$this->send_sms ( '0713449301', $message, $mpesaCode );			
+				$this->send_sms ( $phoneNo, $message, $mpesaCode );			
 			}
 			echo "Messages sent are:" .$this->count;
 		}
