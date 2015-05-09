@@ -10,6 +10,7 @@ class Paybill extends CI_Controller {
 		$this->load->model ( 'Member_model', 'members' );
 		$this->load->helper ( 'file' );
 	}
+
 	function index() {
 		/**
 		 * Extract IPN Parameters
@@ -133,6 +134,7 @@ class Paybill extends CI_Controller {
 		$smsInput ['tstamp'] = date ( "Y-m-d G:i" );
 		$smsInput ['message'] = $message;
 		$smsInput ['destination'] = $phoneNo;
+		$smsInput ['retries'] = 0;
 		
 		$this->transaction->insertSmsLog ( $smsInput );
 		

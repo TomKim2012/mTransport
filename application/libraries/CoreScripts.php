@@ -1,8 +1,8 @@
 <?php
 if (! defined ( 'BASEPATH' ))
 	exit ( 'No direct script access allowed' );
-	
-	// require APPPATH . '/libraries/AfricasTalkingGateway.php';
+
+// require APPPATH . '/libraries/AfricasTalkingGateway.php';
 class CoreScripts {
 	public function __construct() {
 		$this->CI ()->load->library ( 'curl' );
@@ -66,7 +66,6 @@ class CoreScripts {
 		
 		return true;
 	}
-	
 	function format_Number($phoneNumber) {
 		$formatedNumber = "+254" . substr ( $phoneNumber, 1 );
 		return $formatedNumber;
@@ -104,7 +103,7 @@ class CoreScripts {
 			$messageId = $response->messageId;
 			
 			$input = array (
-					'status' => isset($status)?$status:"Failed",
+					'status' => isset ( $status ) ? $status : "Failed",
 					'cost' => substr ( $cost, 3 ),
 					'destination' => $recipient,
 					'message' => $message,
