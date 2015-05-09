@@ -11,7 +11,6 @@ class Paybill extends CI_Controller {
 		$this->load->helper ( 'file' );
 	}
 	function index() {
-		
 		/**
 		 * Extract IPN Parameters
 		 */
@@ -40,12 +39,10 @@ class Paybill extends CI_Controller {
 		if ($parameters ['business_number'] == '510513' || $parameters ['business_number'] == '510512') {
 			$firstName = $this->getFirstName ( $parameters ['mpesa_sender'] ); // JOASH NYADUNDO
 			$phoneNumber = $this->format_number ( $parameters ['mpesa_msisdn'] );
-
-			//Send message to customer who deposited.
-			$message ="Dear ". $firstName .", MPESA deposit of ". $parameters['mpesa_amt'].
-					"Own a Prime Plot in Ruiru with a deposit of  KSh.50k and 25k monthly Installment for 24 Months. 0705300035";
-			$sms_feedback = $this->corescripts->_send_sms2 ($phoneNumber, $message);
-
+			
+			// Send message to customer who deposited.
+			$message = "Dear " . $firstName . ", MPESA deposit of " . $parameters ['mpesa_amt'] . "Own a Prime Plot in Ruiru with a deposit of  KSh.50k and 25k monthly Installment for 24 Months. 0705300035";
+			$sms_feedback = $this->corescripts->_send_sms2 ( $phoneNumber, $message );
 		} else {
 			/*
 			 * Should be sorted asap
@@ -58,33 +55,33 @@ class Paybill extends CI_Controller {
 		/**
 		 * Saving Parameters on successful Authentication
 		 */
-		
 		if (($user == 'pioneerfsa' && $pass == 'financial@2013') || ($user = 'mTransport' && $pass = 'transport@2014')) {
 			if ($parameters ['id']) {
-				$transaction_registration = $this->transaction->record_transaction ( $parameters );
-				echo $transaction_registration;
+				$response = $this->transaction->record_transaction ( $parameters );
+				echo $response ['message'];
+				$parameters ['verificationCode'] = $response ['verificationCode'];
 				
-				// Send SMS to Client
-				$tDate = date ( "d/m/Y" );
-				$tTime = date ( "h:i A" );
-				$till = $this->members->getOwner_by_id ( $parameters ['business_number'] );
-				$balance = $this->members->getTillTotal ( $parameters ['business_number'] );
+				$ipnAddress = $this->transaction->getipnaddress ( $parameters ['business_number'] );
+				$alphaNumeric = $this->transaction->getAlphanumeric ( $parameters ['business_number'] );
 				
-				$message =$this->truncateString( $till ['businessName'] ) . ", " . $parameters ['mpesa_code'] . " of Kes " 
-						. number_format ( $parameters ['mpesa_amt'] ) . " received from " . $this->truncateString($parameters ['mpesa_sender']) 
-						." on " . $tDate . " at " . $tTime . ".New Till balance is Ksh " . $balance.".Helpline 0705300035";
-				
-				$getipnaddress = $this->transaction->getipnaddress ( $parameters ['business_number'] );
-				
-				if (! empty ( $getipnaddress )) {
-					echo "performed IPN";
-					print_r($getipnaddress);
-					//$this->performClientIPN ( $getipnaddress, $parameters );
+				if (isset ( $alphaNumeric->alphanumeric )) {
+					$parameters ['alphanumeric'] = $alphaNumeric->alphanumeric;
+				} else {
+					$parameters ['alphanumeric'] = "PioneerFSA";
 				}
-				$this->prepareTillMessage ( $parameters );
+				
+				if (! empty ( $ipnAddress )) {
+					// $this->performClientIPN ( $getipnaddress, $parameters );
+				}
+				// Owner's Message
+				$this->prepareOwnerMessage ( $parameters );
+				if ($alphaNumeric->allowCustomerSMS == 1) {
+					$this->prepareCustomerMessage ( $parameters );
+				}
 			} else {
 				echo "FAIL|No transaction details were sent";
 			}
+
 		} else {
 			echo "FAIL|The payment could not be completed at this time.
 					Incorrect username / password combination. Pioneer FSA";
@@ -96,8 +93,7 @@ class Paybill extends CI_Controller {
 		$customString = substr ( $firstName, 0, 1 ) . strtolower ( substr ( $firstName, 1 ) );
 		return $customString;
 	}
-	
-	function prepareTillMessage($parameters) {
+	function prepareOwnerMessage($parameters) {
 		// Send SMS to Client
 		$tDate = date ( "d/m/Y" );
 		$tTime = date ( "h:i A" );
@@ -105,32 +101,47 @@ class Paybill extends CI_Controller {
 		$balance = $this->members->getTillTotal ( $parameters ['business_number'] );
 		
 		$message = "Dear " . $this->truncateString ( $till ['businessName'] ) . ", transaction " . $parameters ['mpesa_code'] . " of Kshs. " . number_format ( $parameters ['mpesa_amt'] ) . " received from " . $this->truncateString ( $parameters ['mpesa_sender'] ) . " on " . $tDate . " at " . $tTime . ". New Till balance is Ksh " . $balance;
-		// echo $message;
+		
+		echo $parameters ['alphanumeric'];
 		if ($till ['phoneNo']) {
-			$this->sendSMS($till ['phoneNo'],$message,$parameters['mpesa_code']);
+			$this->sendSMS ( $till ['phoneNo'], $message, $parameters ['mpesa_code'], $parameters ['alphanumeric'] );
 		} else {
 			echo "The Till Phone details are not saved";
 		}
 	}
+	function prepareCustomerMessage($parameters) {
+		// Send SMS to Client
+		$tDate = date ( "d/m/Y" );
+		$tTime = date ( "h:i A" );
+		$till = $this->members->getOwner_by_id ( $parameters ['business_number'] );
 		
-	function sendSMS($phoneNo,$message,$mpesaCode){
-		$smsInput = $this->corescripts->_send_sms2 ($phoneNo, $message );
-			
+		$message = "Dear " . $this->truncateString ( $parameters ['mpesa_sender'] ) . ", your MPESA payment of KES " . number_format ( $parameters ['mpesa_amt'] ) . " received.Use Verification code " . $parameters ['verificationCode'] . ".Thank-you for your business.";
+		// echo $message;
+		
+		if ($parameters ['mpesa_msisdn']) {
+			$phone = $this->format_IPNnumber ( $parameters ['mpesa_msisdn'] );
+			$this->sendSMS ( $phone, $message, $parameters ['mpesa_code'], $parameters ['alphanumeric'] );
+		} else {
+			echo "The Till Phone details are not saved";
+		}
+	}
+	function sendSMS($phoneNo, $message, $mpesaCode, $alphaNumeric) {
+		$smsInput = $this->corescripts->_send_sms2 ( $phoneNo, $message, $alphaNumeric );
+		
 		// Persist sms Log
 		$smsInput ['transactionId'] = $mpesaCode;
 		$smsInput ['tstamp'] = date ( "Y-m-d G:i" );
 		$smsInput ['message'] = $message;
 		$smsInput ['destination'] = $phoneNo;
-			
+		
 		$this->transaction->insertSmsLog ( $smsInput );
-			
+		
 		if ($smsInput ['status']) {
 			echo " and sms sent to customer";
 		} else {
 			echo " sms not sent to customer";
 		}
 	}
-	
 	function truncateString($content) {
 		$truncated = "";
 		if (strlen ( $content ) > 15) {
@@ -140,7 +151,6 @@ class Paybill extends CI_Controller {
 		}
 		return $truncated;
 	}
-	
 	function performClientIPN($getipnaddress, $parameters) {
 		for($x = 0; $x < 4; $x ++) {
 			$ipnstatus = $this->httpPost ( $getipnaddress, $parameters, $x + 1 );
@@ -151,8 +161,7 @@ class Paybill extends CI_Controller {
 			}
 		}
 	}
-	
-	function format_Number($phoneNumber) {
+	function format_IPNnumber($phoneNumber) {
 		$formatedNumber = "0" . substr ( $phoneNumber, 3 );
 		return $formatedNumber;
 	}
@@ -180,7 +189,6 @@ class Paybill extends CI_Controller {
 		rtrim ( $postData, '&' );
 		
 		$postData = str_replace ( ' ', '%20', $postData );
-		
 		
 		$ch = curl_init ();
 		curl_setopt ( $ch, CURLOPT_URL, $url . '?' . $postData );
