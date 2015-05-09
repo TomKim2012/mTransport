@@ -86,6 +86,7 @@ class Lipasms extends REST_Controller {
 				$this->sendSMS ( $phoneNumber, $message, $this->random_string ( 6 ) );
 			}
 		}
+		
 	}
 	
 	function random_string($length = 4) {
