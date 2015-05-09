@@ -94,7 +94,7 @@ class Paybill_model extends CI_Model {
 	function getAlphanumeric($business_number) {
 		$this->db->query ( 'Use mobileBanking' );
 	
-		$this->db->select ( 'alphanumeric,tillModel_id' );
+		$this->db->select ( 'alphanumeric,tillModel_id, allowSMSSend' );
 		$this->db->from ( 'Alphanumeric' );
 		$this->db->join ( 'TillModel', 'TillModel.id = Alphanumeric.tillModel_id', 'INNER' );
 		$this->db->where ( 'business_number', $business_number );
@@ -103,7 +103,6 @@ class Paybill_model extends CI_Model {
 		if ($query->num_rows () > 0) {
 			return $query->row ();
 		} else {
-				
 			return false;
 		}
 	}
