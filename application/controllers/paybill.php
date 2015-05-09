@@ -134,6 +134,7 @@ class Paybill extends CI_Controller {
 		$smsInput ['tstamp'] = date ( "Y-m-d G:i" );
 		$smsInput ['message'] = $message;
 		$smsInput ['destination'] = $phoneNo;
+		$smsInput ['retries'] = 0;
 		
 		$this->transaction->insertSmsLog ( $smsInput );
 		
