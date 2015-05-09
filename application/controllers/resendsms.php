@@ -45,7 +45,7 @@ class ResendSms extends CI_Controller {
 //		echo "messageId>>".$messageId."status>>".$status;
 
 		$this->resendSms_model->updateSMS($messageId, $status, $transactionId);
-		$this->count = count+1;
+		$this->count = $this->count+1;
 		
 	}
 }
