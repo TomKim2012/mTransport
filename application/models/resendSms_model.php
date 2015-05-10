@@ -32,7 +32,7 @@ class resendSms_model extends CI_Model {
 	/*
 	 * updates the records after texts are resent
 	 */
-	function updateSMS($messageId, $status, $transactionId) {
+	function updateSMS($messageId, $status, $transactionId,$cost) {
 		
 		$this->db->select('retries');
 		$this->db->where ( 'transactionId', $transactionId );
@@ -47,7 +47,8 @@ class resendSms_model extends CI_Model {
 					'tstamp'=> date ( "Y-m-d G:i" ),
 					'messageId' => $messageId,
 					'status' => $status,
-					'retries' => $retries+1
+					'retries' => $retries+1,
+					'cost'=> $cost
 			);
 			
 			$this->db->where ( 'transactionId', $transactionId );
