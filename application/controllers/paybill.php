@@ -37,7 +37,7 @@ class Paybill extends CI_Controller {
 		/**
 		 * **********************************
 		 */
-		if ($Parameters ['business_number'] == '510513' || $parameters ['business_number'] == '510512') {
+		if ($parameters ['business_number'] == '510513' || $parameters ['business_number'] == '510512') {
 			$firstName = $this->getFirstName ( $parameters ['mpesa_sender'] ); // JOASH NYADUNDO
 			$phoneNumber = $this->format_number ( $parameters ['mpesa_msisdn'] );
 			
@@ -74,15 +74,15 @@ class Paybill extends CI_Controller {
 				if (! empty ( $ipnAddress )) {
 					// $this->performClientIPN ( $getipnaddress, $parameters );
 				}
-				
 				// Owner's Message
 				$this->prepareOwnerMessage ( $parameters );
-				if ($alphaNumeric->allowCustomerSMS) {
+				if ($alphaNumeric->allowCustomerSMS == 1) {
 					$this->prepareCustomerMessage ( $parameters );
 				}
 			} else {
 				echo "FAIL|No transaction details were sent";
 			}
+
 		} else {
 			echo "FAIL|The payment could not be completed at this time.
 					Incorrect username / password combination. Pioneer FSA";

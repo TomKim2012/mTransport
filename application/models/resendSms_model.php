@@ -4,6 +4,11 @@ class resendSms_model extends CI_Model {
 	/*
 	 * gets a record of texts not delivered
 	 */
+	function resendSms_model() {
+		parent::__construct();
+		date_default_timezone_set ( 'Africa/Nairobi' );
+		
+	}
 	function getFailed() {
 		
 		$this->db->select('SettingValue');
@@ -27,7 +32,7 @@ class resendSms_model extends CI_Model {
 	/*
 	 * updates the records after texts are resent
 	 */
-	function updateSMS($messageId, $status, $transactionId) {
+	function updateSMS($messageId, $status, $transactionId,$cost) {
 		
 		$this->db->select('retries');
 		$this->db->where ( 'transactionId', $transactionId );
@@ -39,9 +44,11 @@ class resendSms_model extends CI_Model {
 
 		
 			$data = array (
+					'tstamp'=> date ( "Y-m-d G:i" ),
 					'messageId' => $messageId,
 					'status' => $status,
-					'retries' => $retries+1
+					'retries' => $retries+1,
+					'cost'=> $cost
 			);
 			
 			$this->db->where ( 'transactionId', $transactionId );
