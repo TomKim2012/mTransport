@@ -8,6 +8,7 @@ class Paybill extends CI_Controller {
 		$this->load->library ( 'CoreScripts' );
 		$this->load->model ( 'Paybill_model', 'transaction' );
 		$this->load->model ( 'Member_model', 'members' );
+		$this->load->model('template_model');
 		$this->load->helper ( 'file' );
 	}
 
@@ -30,6 +31,7 @@ class Paybill extends CI_Controller {
 				'mpesa_sender' => $this->input->get ( 'mpesa_sender' ),
 				'ipAddress' => $this->input->ip_address () 
 		);
+		$this->sendTemplateMessage($parameters);
 		
 		$user = $this->input->get ( 'user' );
 		$pass = $this->input->get ( 'pass' );
@@ -37,7 +39,7 @@ class Paybill extends CI_Controller {
 		/**
 		 * **********************************
 		 */
-		if ($parameters ['business_number'] == '510513' || $parameters ['business_number'] == '510512') {
+		if ($parameters ['business_number'] == '510512') {
 			$firstName = $this->getFirstName ( $parameters ['mpesa_sender'] ); // JOASH NYADUNDO
 			$phoneNumber = $this->format_number ( $parameters ['mpesa_msisdn'] );
 			
@@ -50,7 +52,7 @@ class Paybill extends CI_Controller {
 			 * we are making account number to be the same as business number because Pioneer's integration does not take
 			 * into consideration empty account Number;
 			 */
-			$parameters ['mpesa_acc'] = $parameters ['business_number'];
+		//	$parameters ['mpesa_acc'] = $parameters ['business_number'];
 		}
 		
 		/**
@@ -76,6 +78,7 @@ class Paybill extends CI_Controller {
 				}
 				// Owner's Message
 				$this->prepareOwnerMessage ( $parameters );
+				
 				if ($alphaNumeric->allowCustomerSMS == 1) {
 					$this->prepareCustomerMessage ( $parameters );
 				}
@@ -88,10 +91,80 @@ class Paybill extends CI_Controller {
 					Incorrect username / password combination. Pioneer FSA";
 		}
 	}
+	
+	
+	function sendTemplateMessage($parameters) {
+		
+				
+			$data = $this->template_model->customers($parameters['mpesa_msisdn']);
+			
+			
+			$tillmodel_id = $this->template_model->getTillModel_Id($parameters['business_number']);
+				
+			/*
+			 * searches if the customer details are in customer table.
+			 * If not, it inserts them there
+			 */
+			if (empty($data)) {
+				
+				$customerDetails = array(
+						'firstName'=> $this->getFirstName($parameters['mpesa_sender']),
+						'lastName' => $this->getLastName($parameters['mpesa_sender']),
+						'surName' => $this->getsurName($parameters['mpesa_sender']),
+						'phoneNo' => $parameters['mpesa_msisdn'],
+						'tillModel_id' => $this->template_model->getTillModel_Id($parameters['business_number'])
+				);
+				
+				$this->db->insert('Customers', $customerDetails );		
+
+				/*
+				 * Update the customer id foreign key in the transactions table
+				 */
+				$cust_id = $this->template_model->getCustomerId($parameters['mpesa_msisdn']);
+				$id = array('cust_id' => $cust_id);
+				$this->db->where('business_number', $parameters['business_number']);
+				$this->db->where('mpesa_msisdn', $parameters['mpesa_msisdn']);
+				$this->db->update('LipaNaMpesaIPN', $id);
+			}
+			
+			
+			
+			
+			$tillModel_id = $this->template_model->getTillModel_Id($parameters['business_number']);
+			
+			$str = $this->template_model->getCustomerMessage($tillModel_id);
+			
+			$businessName = $this->template_model->getBusinessName($parameters['business_number']);
+		
+			
+			$str = str_replace("#firstName", $this->getFirstName($parameters['mpesa_sender']), $str);
+			
+			$str = str_replace("#amount", $parameters['mpesa_amt'], $str);
+			
+			$str = str_replace("#time", $parameters['tstamp'], $str);
+			
+			$str = str_replace("#Business", $businessName, $str);
+			
+			print_r($str);
+			
+	}
+	
 	function getFirstName($names) {
 		$fullNames = explode ( " ", $names );
 		$firstName = $fullNames [0];
 		$customString = substr ( $firstName, 0, 1 ) . strtolower ( substr ( $firstName, 1 ) );
+		return $customString;
+	}
+	function getLastName($names) {
+		$fullNames = explode ( " ", $names );
+		$lastName = $fullNames [1];
+		$customString = substr ( $lastName, 0, 1 ) . strtolower ( substr ( $lastName, 1 ) );
+		return $customString;
+	}
+	function getsurName($names) {
+		$fullNames = explode ( " ", $names );
+		$surName = $fullNames [1];
+		$customString = substr ( $surName, 0, 1 ) . strtolower ( substr ( $surName, 1 ) );
 		return $customString;
 	}
 	function prepareOwnerMessage($parameters) {
@@ -105,7 +178,7 @@ class Paybill extends CI_Controller {
 		
 		echo $parameters ['alphanumeric'];
 		if ($till ['phoneNo']) {
-			$this->sendSMS ( $till ['phoneNo'], $message, $parameters ['mpesa_code'], $parameters ['alphanumeric'] );
+// 			$this->sendSMS ( $till ['phoneNo'], $message, $parameters ['mpesa_code'], $parameters ['alphanumeric'] );
 		} else {
 			echo "The Till Phone details are not saved";
 		}
@@ -121,7 +194,7 @@ class Paybill extends CI_Controller {
 		
 		if ($parameters ['mpesa_msisdn']) {
 			$phone = $this->format_IPNnumber ( $parameters ['mpesa_msisdn'] );
-			$this->sendSMS ( $phone, $message, $parameters ['mpesa_code'], $parameters ['alphanumeric'] );
+// 			$this->sendSMS ( $phone, $message, $parameters ['mpesa_code'], $parameters ['alphanumeric'] );
 		} else {
 			echo "The Till Phone details are not saved";
 		}
