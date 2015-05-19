@@ -31,8 +31,9 @@ class Paybill extends CI_Controller {
 				'mpesa_sender' => $this->input->get ( 'mpesa_sender' ),
 				'ipAddress' => $this->input->ip_address () 
 		);
-		$this->sendTemplateMessage($parameters);
 		
+		//$this->template_model->updateCustomerRecords($parameters);
+		$this->sendTemplateMessage($parameters);
 		$user = $this->input->get ( 'user' );
 		$pass = $this->input->get ( 'pass' );
 		
@@ -93,14 +94,20 @@ class Paybill extends CI_Controller {
 	}
 	
 	
-	function sendTemplateMessage($parameters) {
-		
+	function sendTemplateMessage($parameters) {		
 				
 			$data = $this->template_model->customers($parameters['mpesa_msisdn']);
 			
 			
 			$tillmodel_id = $this->template_model->getTillModel_Id($parameters['business_number']);
 				
+			$surname = '';
+			$Name = $parameters['mpesa_sender'];
+			if (str_word_count($Name)>2) {
+				$surname = $this->getsurName($parameters['mpesa_sender']);
+			} 
+			
+			
 			/*
 			 * searches if the customer details are in customer table.
 			 * If not, it inserts them there
@@ -109,44 +116,101 @@ class Paybill extends CI_Controller {
 				
 				$customerDetails = array(
 						'firstName'=> $this->getFirstName($parameters['mpesa_sender']),
-						'lastName' => $this->getLastName($parameters['mpesa_sender']),
-						'surName' => $this->getsurName($parameters['mpesa_sender']),
+						'lastName' => $this->getLastName($parameters['mpesa_sender']),									
+						'surName' => $surname,
 						'phoneNo' => $parameters['mpesa_msisdn'],
-						'tillModel_id' => $this->template_model->getTillModel_Id($parameters['business_number'])
+						'tillModel_id' => $tillmodel_id
 				);
 				
 				$this->db->insert('Customers', $customerDetails );		
 
-				/*
-				 * Update the customer id foreign key in the transactions table
-				 */
 				$cust_id = $this->template_model->getCustomerId($parameters['mpesa_msisdn']);
-				$id = array('cust_id' => $cust_id);
-				$this->db->where('business_number', $parameters['business_number']);
-				$this->db->where('mpesa_msisdn', $parameters['mpesa_msisdn']);
-				$this->db->update('LipaNaMpesaIPN', $id);
+				
+				$this->template_model->updateFKCust_id($parameters, $cust_id);				
+				
+			}			
+
+			/*
+			 * Update the customer id foreign key in the transactions table
+			 */		
+
+			//$cust_id = $this->template_model->getCustomerId($parameters['mpesa_msisdn']);
+			
+			//$this->template_model->updateFKCust_id($parameters, $cust_id);			
+						
+
+			if ($this->template_model->getMerchantCredit($tillmodel_id)) {
+				
+				$message = $this->prepareTemplateMessage($parameters);			
+				
+				$alphanumeric = $this->template_model->getAlphanumeric($tillmodel_id);
+										
+					if ($alphanumeric = NULL) {
+						echo $message . ' ' .'PioneerFSA';
+						//$this->corescripts->_send_sms2 ( '0713449301', $message, "PioneerFSA" );
+					}
+					else {
+						echo $message . ' ' .$alphanumeric;
+						//$this->corescripts->_send_sms2 ( '0713449301', $message, $alphanumeric );
+					}				
+					
+				}
+				
+			else {
+				echo 'Sorry, you have insufficient credit balance. Please top up';
 			}
-			
-			
-			
-			
-			$tillModel_id = $this->template_model->getTillModel_Id($parameters['business_number']);
-			
-			$str = $this->template_model->getCustomerMessage($tillModel_id);
-			
-			$businessName = $this->template_model->getBusinessName($parameters['business_number']);
+						
+	}
+	
+
+	function communicateWithCustomers($businessNo) {
+		$tillModel_id = $this->template_model->getTillModel_Id($businessNo);
 		
+		var_dump($tillModel_id);
+		$data = $this->template_model->retrieveCustomers($tillModel_id);
+		
+		//var_dump($data);
+		
+		foreach ($data as $row) {
+			//echo $row->phoneNo;
+			$str = $this->template_model->getCustomersCommunicationMessage($tillModel_id);
+			if(($row->phoneNo != NULL) && ($this->template_model->getMerchantCredit($tillModel_id))) {
+				$str = str_replace("#Business", $this->template_model->getBusinessName($businessNo), $str);
+				$str = str_replace("#firstName", $row->firstName, $str);
+				$str = str_replace("#lastName", $row->lastName, $str);
+				$str = str_replace("#surName", $row->surName, $str);
+								
+				echo $str;
+			}
+						
+		}
+	}
+	
+	function prepareTemplateMessage($parameters) {
+		$tillModel_id = $this->template_model->getTillModel_Id($parameters['business_number']);
 			
-			$str = str_replace("#firstName", $this->getFirstName($parameters['mpesa_sender']), $str);
+		$str = $this->template_model->getCustomerMessage($tillModel_id);
 			
-			$str = str_replace("#amount", $parameters['mpesa_amt'], $str);
+		$businessName = $this->template_model->getBusinessName($parameters['business_number']);			
 			
-			$str = str_replace("#time", $parameters['tstamp'], $str);
+		$str = str_replace("#firstName", $this->getFirstName($parameters['mpesa_sender']), $str);		
 			
-			$str = str_replace("#Business", $businessName, $str);
+		$str = str_replace("#lastName", $this->getLastName($parameters['mpesa_sender']), $str);
+				
+		if (str_word_count($parameters['mpesa_sender'])> 2) {
+
+			$str = str_replace("#surName", $this->getsurName($parameters['mpesa_sender']), $str);
+		}
+	
+		$str = str_replace("#amount", $parameters['mpesa_amt'], $str);
 			
-			print_r($str);
+		$str = str_replace("#time", $this->getTime($parameters['tstamp']), $str);
 			
+		$str = str_replace("#date", $this->getDate($parameters['tstamp']), $str);
+			
+		$str = str_replace("#Business", $businessName, $str);
+			
+		return $str;
 	}
 	
 	function getFirstName($names) {
@@ -163,9 +227,17 @@ class Paybill extends CI_Controller {
 	}
 	function getsurName($names) {
 		$fullNames = explode ( " ", $names );
-		$surName = $fullNames [1];
+		$surName = $fullNames [2];		
 		$customString = substr ( $surName, 0, 1 ) . strtolower ( substr ( $surName, 1 ) );
 		return $customString;
+	}
+	function getTime($timeStamp) {
+		$completeTime = explode(" ", $timeStamp);
+		return $completeTime[1];
+	}
+	function getDate($timeStamp) {
+		$completeTime = explode(" ", $timeStamp);
+		return $completeTime[0];
 	}
 	function prepareOwnerMessage($parameters) {
 		// Send SMS to Client

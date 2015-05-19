@@ -9,21 +9,8 @@ class Template extends CI_Controller {
 		$this->load->library ( 'CoreScripts' );
 		$this->load->model('template_model');		
 	
-	}
-	
-	function crap() {
-		
-		$names = "I ";
-		$fullNames = explode ( " ", $names );
-		$firstName = $fullNames [0];
-		$customString = substr ( $firstName, 0, 1 ) . strtolower ( substr ( $firstName, 1 ) );
-		echo $customString;	
-		
-		$secondName = $fullNames[1];
-		$customString2 = substr ( $secondName, 0, 1 ) . strtolower ( substr ( $secondName, 1 ) );
-		echo $customString2;
-	}
-	
+	}	
+
 	function index() {		
 		
 		$firstName = "";

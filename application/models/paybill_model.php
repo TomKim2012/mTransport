@@ -107,7 +107,6 @@ class Paybill_model extends CI_Model {
 	
 	function inseripnlog($ipnlog) {
 		$this->db->query ( 'Use mobileBanking' );
-		
 		$query = $this->db->insert ( 'IPN_logs', $ipnlog );
 		
 		if ($query) {

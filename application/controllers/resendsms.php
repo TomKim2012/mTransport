@@ -47,10 +47,11 @@ class ResendSms extends CI_Controller {
 		else {
 			$status = $smsInput['status'];			
 		}
+		$cost = $smsInput['cost'];
 		
 //		echo "messageId>>".$messageId."status>>".$status;
 
-		$this->resendSms_model->updateSMS($messageId, $status, $transactionId);
+		$this->resendSms_model->updateSMS($messageId, $status, $transactionId,$cost);
 		$this->count = $this->count+1;
 		
 	}
