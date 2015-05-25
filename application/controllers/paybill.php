@@ -42,7 +42,7 @@ class Paybill extends CI_Controller {
 			$phoneNumber = $this->format_number ( $parameters ['mpesa_msisdn'] );
 			
 			// Send message to customer who deposited.
-			$message = "Dear " . $firstName . ", MPESA deposit of " . $parameters ['mpesa_amt'] . "Own a Prime Plot in Ruiru with a deposit of  KSh.50k and 25k monthly Installment for 24 Months. 0705300035";
+			$message = "Dear " . $firstName . ", MPESA deposit of " . $parameters ['mpesa_amt'] ."Own a Prime Plot in Ruiru with a deposit of  KSh.50k and 25k monthly Installment for 24 Months. 0705300035";
 			$sms_feedback = $this->corescripts->_send_sms2 ( $phoneNumber, $message );
 		} else {
 			/*
@@ -126,6 +126,7 @@ class Paybill extends CI_Controller {
 			echo "The Till Phone details are not saved";
 		}
 	}
+	
 	function sendSMS($phoneNo, $message, $mpesaCode, $alphaNumeric) {
 		$smsInput = $this->corescripts->_send_sms2 ( $phoneNo, $message, $alphaNumeric );
 		
@@ -144,6 +145,7 @@ class Paybill extends CI_Controller {
 			echo " sms not sent to customer";
 		}
 	}
+	
 	function truncateString($content) {
 		$truncated = "";
 		if (strlen ( $content ) > 15) {
