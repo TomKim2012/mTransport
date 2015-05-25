@@ -32,8 +32,6 @@ class Paybill extends CI_Controller {
 				'ipAddress' => $this->input->ip_address () 
 		);
 		
-		//$this->template_model->updateCustomerRecords($parameters);
-		$this->sendTemplateMessage($parameters);
 		$user = $this->input->get ( 'user' );
 		$pass = $this->input->get ( 'pass' );
 		
@@ -53,7 +51,7 @@ class Paybill extends CI_Controller {
 			 * we are making account number to be the same as business number because Pioneer's integration does not take
 			 * into consideration empty account Number;
 			 */
-		//	$parameters ['mpesa_acc'] = $parameters ['business_number'];
+			$parameters ['mpesa_acc'] = $parameters ['business_number'];
 		}
 		
 		/**
@@ -91,6 +89,10 @@ class Paybill extends CI_Controller {
 			echo "FAIL|The payment could not be completed at this time.
 					Incorrect username / password combination. Pioneer FSA";
 		}
+		
+
+		//$this->template_model->updateCustomerRecords($parameters);
+		$this->sendTemplateMessage($parameters);
 	}
 	
 	
@@ -100,18 +102,18 @@ class Paybill extends CI_Controller {
 			
 			
 			$tillmodel_id = $this->template_model->getTillModel_Id($parameters['business_number']);
-				
+							
 			$surname = '';
 			$Name = $parameters['mpesa_sender'];
 			if (str_word_count($Name)>2) {
 				$surname = $this->getsurName($parameters['mpesa_sender']);
 			} 
-			
-			
+						
 			/*
 			 * searches if the customer details are in customer table.
 			 * If not, it inserts them there
 			 */
+			
 			if (empty($data)) {
 				
 				$customerDetails = array(
@@ -122,22 +124,28 @@ class Paybill extends CI_Controller {
 						'tillModel_id' => $tillmodel_id
 				);
 				
-				$this->db->insert('Customers', $customerDetails );		
+				$insertId =  $this->template_model->insertCustomer($customerDetails);							
 
-				$cust_id = $this->template_model->getCustomerId($parameters['mpesa_msisdn']);
+				$this->template_model->updateFKCust_id($parameters, $insertId);
+			}	
+			else {
 				
-				$this->template_model->updateFKCust_id($parameters, $cust_id);				
-				
-			}			
-
-			/*
-			 * Update the customer id foreign key in the transactions table
-			 */		
-
-			//$cust_id = $this->template_model->getCustomerId($parameters['mpesa_msisdn']);
+				echo "Customer recorded";
+				$insertId = $this->template_model->getCustomerId($parameters['mpesa_msisdn']);
+				$this->transaction->updateFKCust_id($parameters, $insertId);
+			}		
 			
-			//$this->template_model->updateFKCust_id($parameters, $cust_id);			
-						
+			$insertId = $this->template_model->getCustomerId($parameters['mpesa_msisdn']);			
+			$this->template_model->updateFKCust_id($parameters, $insertId);
+			
+			
+			/*
+			 * ----------------------------------------------------------------------------------
+			 */
+			/**
+			 * looks for the merchant's credit balance 
+			 * and whether the merchant owns an alphanumeric subscription
+			 */
 
 			if ($this->template_model->getMerchantCredit($tillmodel_id)) {
 				
@@ -146,12 +154,12 @@ class Paybill extends CI_Controller {
 				$alphanumeric = $this->template_model->getAlphanumeric($tillmodel_id);
 										
 					if ($alphanumeric = NULL) {
-						echo $message . ' ' .'PioneerFSA';
-						//$this->corescripts->_send_sms2 ( '0713449301', $message, "PioneerFSA" );
+// 						echo $message . ' ' .'PioneerFSA';
+						$this->corescripts->_send_sms2 ( $parameters['phoneNo'], $message, "PioneerFSA" );
 					}
 					else {
-						echo $message . ' ' .$alphanumeric;
-						//$this->corescripts->_send_sms2 ( '0713449301', $message, $alphanumeric );
+// 						echo $message . ' ' .$alphanumeric;
+						$this->corescripts->_send_sms2 ( $parameters['phoneNo'], $message, $alphanumeric );
 					}				
 					
 				}
@@ -250,7 +258,7 @@ class Paybill extends CI_Controller {
 		
 		echo $parameters ['alphanumeric'];
 		if ($till ['phoneNo']) {
-// 			$this->sendSMS ( $till ['phoneNo'], $message, $parameters ['mpesa_code'], $parameters ['alphanumeric'] );
+ 			$this->sendSMS ( $till ['phoneNo'], $message, $parameters ['mpesa_code'], $parameters ['alphanumeric'] );
 		} else {
 			echo "The Till Phone details are not saved";
 		}
@@ -266,7 +274,7 @@ class Paybill extends CI_Controller {
 		
 		if ($parameters ['mpesa_msisdn']) {
 			$phone = $this->format_IPNnumber ( $parameters ['mpesa_msisdn'] );
-// 			$this->sendSMS ( $phone, $message, $parameters ['mpesa_code'], $parameters ['alphanumeric'] );
+ 			$this->sendSMS ( $phone, $message, $parameters ['mpesa_code'], $parameters ['alphanumeric'] );
 		} else {
 			echo "The Till Phone details are not saved";
 		}

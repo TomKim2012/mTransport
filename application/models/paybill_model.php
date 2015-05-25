@@ -115,6 +115,7 @@ class Paybill_model extends CI_Model {
 			return false;
 		}
 	}
+	
 	function random_string($length = 4) {
 		$firstPart = substr ( str_shuffle ( "ABCDEFGHIJKLMNOPQRSTUVWXYZ" ), 0, 2 );
 		// Generate random 4 character string
