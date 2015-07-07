@@ -8,10 +8,9 @@ class Paybill extends CI_Controller {
 		$this->load->library ( 'CoreScripts' );
 		$this->load->model ( 'Paybill_model', 'transaction' );
 		$this->load->model ( 'Member_model', 'members' );
-		$this->load->model('template_model');
+		$this->load->model ( 'template_model' );
 		$this->load->helper ( 'file' );
 	}
-
 	function index() {
 		/**
 		 * Extract IPN Parameters
@@ -76,151 +75,164 @@ class Paybill extends CI_Controller {
 					// $this->performClientIPN ( $getipnaddress, $parameters );
 				}
 				// Owner's Message
-				$this->prepareOwnerMessage ( $parameters );
+				// $this->prepareOwnerMessage ( $parameters );
 				
 				if ($alphaNumeric->allowCustomerSMS == 1) {
-					$this->prepareCustomerMessage ( $parameters );
+					$tillmodel_id = $this->template_model->getTillModel_Id ( $parameters ['business_number'] );
+					$tMessage = $this->template_model->getTransactionMessage ( $tillmodel_id );
+					
+					//$this->prepareCustomerMessage ( $parameters );						
+					
+/* 					if (!$tMessage) {
+						$this->prepareCustomerMessage ( $parameters );
+					} else {
+						$this->sendTemplateMessage ( $parameters );
+					} */
 				}
 			} else {
 				echo "FAIL|No transaction details were sent";
 			}
-
 		} else {
 			echo "FAIL|The payment could not be completed at this time.
 					Incorrect username / password combination. Pioneer FSA";
 		}
 		
+		// $this->template_model->updateCustomerRecords($parameters);
 
-		//$this->template_model->updateCustomerRecords($parameters);
-		$this->sendTemplateMessage($parameters);
+		
+		$tillmodel_id = $this->template_model->getTillModel_Id ( $parameters ['business_number'] );
+		$tMessage = $this->template_model->getTransactionMessage ( $tillmodel_id );
+			
+		//$this->prepareCustomerMessage ( $parameters );
+			
+		if (!$tMessage) {
+			$this->prepareCustomerMessage ( $parameters );
+		} else {
+			$this->sendTemplateMessage ( $parameters );
+		}
+		
+		
 	}
 	
-	
-	function sendTemplateMessage($parameters) {		
-				
-			$data = $this->template_model->customers($parameters['mpesa_msisdn']);
-			
-			
-			$tillmodel_id = $this->template_model->getTillModel_Id($parameters['business_number']);
-							
-			$surname = '';
-			$Name = $parameters['mpesa_sender'];
-			if (str_word_count($Name)>2) {
-				$surname = $this->getsurName($parameters['mpesa_sender']);
-			} 
-						
-			/*
-			 * searches if the customer details are in customer table.
-			 * If not, it inserts them there
-			 */
-			
-			if (empty($data)) {
-				
-				$customerDetails = array(
-						'firstName'=> $this->getFirstName($parameters['mpesa_sender']),
-						'lastName' => $this->getLastName($parameters['mpesa_sender']),									
-						'surName' => $surname,
-						'phoneNo' => $parameters['mpesa_msisdn'],
-						'tillModel_id' => $tillmodel_id
-				);
-				
-				$insertId =  $this->template_model->insertCustomer($customerDetails);							
-
-				$this->template_model->updateFKCust_id($parameters, $insertId);
-			}	
-			else {
-				
-				echo "Customer recorded";
-				$insertId = $this->template_model->getCustomerId($parameters['mpesa_msisdn']);
-				$this->transaction->updateFKCust_id($parameters, $insertId);
-			}		
-			
-			$insertId = $this->template_model->getCustomerId($parameters['mpesa_msisdn']);			
-			$this->template_model->updateFKCust_id($parameters, $insertId);
-			
-			
-			/*
-			 * ----------------------------------------------------------------------------------
-			 */
-			/**
-			 * looks for the merchant's credit balance 
-			 * and whether the merchant owns an alphanumeric subscription
-			 */
-
-			if ($this->template_model->getMerchantCredit($tillmodel_id)) {
-				
-				$message = $this->prepareTemplateMessage($parameters);			
-				
-				$alphanumeric = $this->template_model->getAlphanumeric($tillmodel_id);
-										
-					if ($alphanumeric = NULL) {
-// 						echo $message . ' ' .'PioneerFSA';
-						$this->corescripts->_send_sms2 ( $parameters['phoneNo'], $message, "PioneerFSA" );
-					}
-					else {
-// 						echo $message . ' ' .$alphanumeric;
-						$this->corescripts->_send_sms2 ( $parameters['phoneNo'], $message, $alphanumeric );
-					}				
-					
-				}
-				
-			else {
-				echo 'Sorry, you have insufficient credit balance. Please top up';
-			}
-						
+	// looks through existing transaction records and updates the customer records
+	function updateCustomers() {
+		$this->template_model->updateCustomerRecords ();
 	}
-	
-
+	function sendTemplateMessage($parameters) {
+		$tillmodel_id = $this->template_model->getTillModel_Id ( $parameters ['business_number'] );
+		$data = $this->template_model->customers ( $parameters ['mpesa_msisdn'], $tillmodel_id );
+				
+		echo "This is the tillmodel_id " . $tillmodel_id;
+		$surname = '';
+		$Name = $parameters ['mpesa_sender'];
+		if (str_word_count ( $Name ) > 2) {
+			$surname = $this->getsurName ( $parameters ['mpesa_sender'] );
+		} else {
+			$surname = "";
+		}
+		
+		/*
+		 * searches if the customer details are in customer table.
+		 * If not, it inserts them there
+		 */
+		
+		if (empty ( $data )) {
+			
+			$customerDetails = array (
+					'firstName' => $this->getFirstName ( $parameters ['mpesa_sender'] ),
+					'lastName' => $this->getLastName ( $parameters ['mpesa_sender'] ),
+					'surName' => $surname,
+					'phoneNo' => $parameters ['mpesa_msisdn'],
+					'tillModel_id' => $tillmodel_id 
+			);
+			
+			$insertId = $this->template_model->insertCustomer ( $customerDetails );
+			
+			$this->template_model->updateFKCust_id ( $parameters, $insertId );
+			
+			echo "Customer recorded";
+		} else {
+			
+			echo "Customer already in db";
+			$insertId = $this->template_model->getCustomerId ( $parameters ['mpesa_msisdn'] );
+			$this->template_model->updateFKCust_id ( $parameters, $insertId );
+		}
+		
+		$insertId = $this->template_model->getCustomerId ( $parameters ['mpesa_msisdn'] );
+		$this->template_model->updateFKCust_id ( $parameters, $insertId );
+		
+		/*
+		 * ----------------------------------------------------------------------------------
+		 */
+		/**
+		 * looks for the merchant's credit balance
+		 * and whether the merchant owns an alphanumeric subscription
+		 */
+		
+		$message = $this->prepareTemplateMessage ( $parameters );
+		
+		$alphanumeric = $this->template_model->getAlphanumeric ( $tillmodel_id );
+		
+		if (! ($this->template_model->getAlphanumeric ( $tillmodel_id ))) {
+			echo $message . ' ' . 'PioneerFSA';
+			// $this->corescripts->_send_sms2 ( $parameters['phoneNo'], $message, "PioneerFSA" );
+			$this->corescripts->_send_sms2 ( '0711415305', $message, "PioneerFSA" );
+		} else {
+			$alphanumeric = $this->template_model->getAlphanumeric ( $tillmodel_id );
+			echo $message . ' ' . $alphanumeric;
+			// $this->corescripts->_send_sms2 ( $parameters['phoneNo'], $message, $alphanumeric );
+			$this->corescripts->_send_sms2 ( '0711415305', $message, $alphanumeric );
+		}
+	}
 	function communicateWithCustomers($businessNo) {
-		$tillModel_id = $this->template_model->getTillModel_Id($businessNo);
+		$tillModel_id = $this->template_model->getTillModel_Id ( $businessNo );
 		
-		var_dump($tillModel_id);
-		$data = $this->template_model->retrieveCustomers($tillModel_id);
+		var_dump ( $tillModel_id );
+		$data = $this->template_model->retrieveCustomers ( $tillModel_id );
 		
-		//var_dump($data);
+		// var_dump($data);
 		
-		foreach ($data as $row) {
-			//echo $row->phoneNo;
-			$str = $this->template_model->getCustomersCommunicationMessage($tillModel_id);
-			if(($row->phoneNo != NULL) && ($this->template_model->getMerchantCredit($tillModel_id))) {
-				$str = str_replace("#Business", $this->template_model->getBusinessName($businessNo), $str);
-				$str = str_replace("#firstName", $row->firstName, $str);
-				$str = str_replace("#lastName", $row->lastName, $str);
-				$str = str_replace("#surName", $row->surName, $str);
-								
+		foreach ( $data as $row ) {
+			// echo $row->phoneNo;
+			$str = $this->template_model->getCustomersCommunicationMessage ( $tillModel_id );
+			if (($row->phoneNo != NULL) && ($this->template_model->getMerchantCredit ( $tillModel_id ))) {
+				$str = str_replace ( "#Business", $this->template_model->getBusinessName ( $businessNo ), $str );
+				$str = str_replace ( "#firstName", $row->firstName, $str );
+				$str = str_replace ( "#lastName", $row->lastName, $str );
+				$str = str_replace ( "#surName", $row->surName, $str );
+				
 				echo $str;
 			}
-						
 		}
 	}
-	
 	function prepareTemplateMessage($parameters) {
-		$tillModel_id = $this->template_model->getTillModel_Id($parameters['business_number']);
+		$tillModel_id = $this->template_model->getTillModel_Id ( $parameters ['business_number'] );
+		
+		$str = $this->template_model->getTransactionMessage ( $tillModel_id );
+		
+		$businessName = $this->template_model->getBusinessName ( $parameters ['business_number'] );
+		
+		$str = str_replace ( "#firstName", $this->getFirstName ( $parameters ['mpesa_sender'] ), $str );
+		
+		$str = str_replace ( "#lastName", $this->getLastName ( $parameters ['mpesa_sender'] ), $str );
+		
+		if (str_word_count ( $parameters ['mpesa_sender'] ) > 2) {
 			
-		$str = $this->template_model->getCustomerMessage($tillModel_id);
-			
-		$businessName = $this->template_model->getBusinessName($parameters['business_number']);			
-			
-		$str = str_replace("#firstName", $this->getFirstName($parameters['mpesa_sender']), $str);		
-			
-		$str = str_replace("#lastName", $this->getLastName($parameters['mpesa_sender']), $str);
-				
-		if (str_word_count($parameters['mpesa_sender'])> 2) {
-
-			$str = str_replace("#surName", $this->getsurName($parameters['mpesa_sender']), $str);
+			$str = str_replace ( "#surName", $this->getsurName ( $parameters ['mpesa_sender'] ), $str );
+		} else {
+			$str = str_replace ( "#surName", "", $str );
 		}
-	
-		$str = str_replace("#amount", $parameters['mpesa_amt'], $str);
-			
-		$str = str_replace("#time", $this->getTime($parameters['tstamp']), $str);
-			
-		$str = str_replace("#date", $this->getDate($parameters['tstamp']), $str);
-			
-		$str = str_replace("#Business", $businessName, $str);
-			
+		
+		$str = str_replace ( "#amount", $parameters ['mpesa_amt'], $str );
+		
+		$str = str_replace ( "#time", $this->getTime ( $parameters ['tstamp'] ), $str );
+		
+		$str = str_replace ( "#date", $this->getDate ( $parameters ['tstamp'] ), $str );
+		
+		$str = str_replace ( "#Business", $businessName, $str );
+		
 		return $str;
 	}
-	
 	function getFirstName($names) {
 		$fullNames = explode ( " ", $names );
 		$firstName = $fullNames [0];
@@ -235,17 +247,17 @@ class Paybill extends CI_Controller {
 	}
 	function getsurName($names) {
 		$fullNames = explode ( " ", $names );
-		$surName = $fullNames [2];		
+		$surName = $fullNames [2];
 		$customString = substr ( $surName, 0, 1 ) . strtolower ( substr ( $surName, 1 ) );
 		return $customString;
 	}
 	function getTime($timeStamp) {
-		$completeTime = explode(" ", $timeStamp);
-		return $completeTime[1];
+		$completeTime = explode ( " ", $timeStamp );
+		return $completeTime [1];
 	}
 	function getDate($timeStamp) {
-		$completeTime = explode(" ", $timeStamp);
-		return $completeTime[0];
+		$completeTime = explode ( " ", $timeStamp );
+		return $completeTime [0];
 	}
 	function prepareOwnerMessage($parameters) {
 		// Send SMS to Client
@@ -258,7 +270,7 @@ class Paybill extends CI_Controller {
 		
 		echo $parameters ['alphanumeric'];
 		if ($till ['phoneNo']) {
- 			$this->sendSMS ( $till ['phoneNo'], $message, $parameters ['mpesa_code'], $parameters ['alphanumeric'] );
+			$this->sendSMS ( $till ['phoneNo'], $message, $parameters ['mpesa_code'], $parameters ['alphanumeric'] );
 		} else {
 			echo "The Till Phone details are not saved";
 		}
@@ -273,8 +285,9 @@ class Paybill extends CI_Controller {
 		// echo $message;
 		
 		if ($parameters ['mpesa_msisdn']) {
-			$phone = $this->format_IPNnumber ( $parameters ['mpesa_msisdn'] );
- 			$this->sendSMS ( $phone, $message, $parameters ['mpesa_code'], $parameters ['alphanumeric'] );
+			//$phone = $this->format_IPNnumber ( $parameters ['mpesa_msisdn'] );
+			$phone = $this->format_IPNnumber('254713449301');
+			$this->sendSMS ( $phone, $message, $parameters ['mpesa_code'], $parameters ['alphanumeric'] );
 		} else {
 			echo "The Till Phone details are not saved";
 		}

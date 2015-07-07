@@ -1,17 +1,21 @@
 <?php
 class Template_model extends CI_Model {
-	function updateCustomerRecords($parameters) {
-		$this->db->distinct ();
-		$this->db->select ( 'mpesa_msisdn' );
-		$this->db->where ( $parameters ['business_number'] );
+	function updateCustomerRecords() {
+			
+		$this->db->select('*');
 		$this->db->from ( 'LipaNaMpesaIPN' );
-		$results = $this->db->get ();
+		$query = $this->db->get();
+		$results = $query->result();
 		
-		$tillmodel_id = $this->template_model->getTillModel_Id ( $parameters ['business_number'] );
+		var_dump($results);
+		//$tillmodel_id = $this->template_model->getTillModel_Id ( $parameters ['business_number'] );
 		
 		if (! empty ( $results )) {
+			echo "Not empty";
 			foreach ( $results as $row ) {
 				$phoneNo = $row->mpesa_msisdn;
+				$businessNo = $row->business_number;
+				$tillmodel_id = $this->getTillModel_Id($businessNo);
 				$customerDetails = array (
 						'firstName' => $this->getFirstName ( $row->mpesa_sender ),
 						'lastName' => $this->getLastName ( $row->mpesa_sender ),
@@ -20,10 +24,10 @@ class Template_model extends CI_Model {
 						'tillModel_id' => $tillmodel_id 
 				);
 				
-				if ($this->customers ( $phoneNo )) {
+				if ($this->customers ( $phoneNo, $tillmodel_id )) {
 					// ignore, record alreasy exists
 				} else {
-					$this->db->insert ( 'Customers', $customerDetails );
+					$this->db->insert ( 'CustomerModel', $customerDetails );
 				}
 			}
 			
@@ -32,10 +36,11 @@ class Template_model extends CI_Model {
 			echo 'All records are up to date';
 		}
 	}
-	function customers($mpesa_msisdn) {
+	function customers($mpesa_msisdn, $tillmodel_id) {
 		$this->db->select ( '*' );
 		$this->db->where ( "phoneNo", $mpesa_msisdn );
-		$this->db->from ( 'Customers' );
+		$this->db->where ( "tillModel_id", $tillmodel_id );
+		$this->db->from ( 'CustomerModel' );
 		
 		$query = $this->db->get ();
 		
@@ -44,7 +49,7 @@ class Template_model extends CI_Model {
 	function retrieveCustomers($tillModel_Id) {
 		$this->db->select ( '*' );
 		$this->db->where ( 'tillModel_id', $tillModel_Id );
-		$this->db->from ( 'Customers' );
+		$this->db->from ( 'CustomerModel' );
 		
 		$query = $this->db->get ();
 		return $query->result ();
@@ -62,7 +67,7 @@ class Template_model extends CI_Model {
 	function getCustomerId($phoneNumber) {
 		$this->db->select ( 'custId' );
 		$this->db->where ( 'phoneNo', $phoneNumber );
-		$this->db->from ( 'Customers' );
+		$this->db->from ( 'CustomerModel' );
 		$query = $this->db->get ();
 		return $query->row ()->custId;
 	}
@@ -90,7 +95,7 @@ class Template_model extends CI_Model {
 		return $result->row ()->id;
 	}
 	function insertCustomer($customerDetails) {
-		$this->db->insert ( 'Customers', $customerDetails );
+		$this->db->insert ( 'CustomerModel', $customerDetails );
 		return $this->db->insert_id ();
 	}
 	function updateFKCust_id($parameters, $cust_id) {
@@ -105,12 +110,24 @@ class Template_model extends CI_Model {
 		
 		//echo $this->db->last_query ();
 		
+	}	
+	function getTransactionMessage($tillModel_id) {
+		$this->db->select ( 'message' );
+		$this->db->where ( 'tillModel_Id', $tillModel_id );
+		$this->db->where ('type', 'Transaction: After customer transaction');
+		$this->db->where ( 'isDefault', '1' );
+		$this->db->from ( 'TemplateModel' );
+		$query = $this->db->get ();
+	
+		// echo $this->db->last_query();
+	
+		return $query->row()->message;
 	}
 	function getCustomerMessage($tillModel_id) {
 		$this->db->select ( 'message' );
 		$this->db->where ( 'tillModel_Id', $tillModel_id );
 		$this->db->where ( 'isDefaultAutomatic', '1' );
-		$this->db->from ( 'template' );
+		$this->db->from ( 'TemplateModel' );
 		$query = $this->db->get ();
 		
 		// echo $this->db->last_query();
@@ -174,8 +191,13 @@ class Template_model extends CI_Model {
 	}
 	function getsurName($names) {
 		$fullNames = explode ( " ", $names );
-		$surName = $fullNames [1];
-		$customString = substr ( $surName, 0, 1 ) . strtolower ( substr ( $surName, 1 ) );
-		return $customString;
+		if (str_word_count($names)>2) {
+			$surName = $fullNames [2];
+			$customString = substr ( $surName, 0, 1 ) . strtolower ( substr ( $surName, 1 ) );
+			return $customString;
+		} else {
+			return null;
+		}
+			
 	}
 }
