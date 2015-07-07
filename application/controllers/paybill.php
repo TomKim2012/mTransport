@@ -37,12 +37,14 @@ class Paybill extends CI_Controller {
 		/**
 		 * **********************************
 		 */
-		if ($parameters ['business_number'] == '510513' || $parameters ['business_number'] == '510512') {
+		if ($parameters ['business_number'] == '510513' || $parameters ['business_number'] == '510511' || 
+			$parameters ['business_number'] == '510510' || $parameters ['business_number'] == '510512') {
 			$firstName = $this->getFirstName ( $parameters ['mpesa_sender'] ); // JOASH NYADUNDO
 			$phoneNumber = $this->format_number ( $parameters ['mpesa_msisdn'] );
 			
 			// Send message to customer who deposited.
-			$message = "Dear " . $firstName . ", MPESA deposit of " . $parameters ['mpesa_amt'] . "Own a Prime Plot in Ruiru with a deposit of  KSh.50k and 25k monthly Installment for 24 Months. 0705300035";
+			$message = "Dear " . $firstName . ", MPESA deposit of " . $parameters ['mpesa_amt'] . 
+			"Own a prime plot by raising 10% deposit,pay balance in 24months.Offer:Kamulu 349K,Ruiru 499K,Rongai 599K.0705300035";
 			$sms_feedback = $this->corescripts->_send_sms2 ( $phoneNumber, $message );
 		} else {
 			/*
@@ -76,9 +78,11 @@ class Paybill extends CI_Controller {
 				}
 				// Owner's Message
 				$this->prepareOwnerMessage ( $parameters );
-				if ($alphaNumeric->allowCustomerSMS == 1) {
+				$this->prepareCustomerMessage ( $parameters );
+				
+				/*if ($alphaNumeric->allowCustomerSMS == 1) {
 					$this->prepareCustomerMessage ( $parameters );
-				}
+				}*/
 			} else {
 				echo "FAIL|No transaction details were sent";
 			}
@@ -116,8 +120,9 @@ class Paybill extends CI_Controller {
 		$tTime = date ( "h:i A" );
 		$till = $this->members->getOwner_by_id ( $parameters ['business_number'] );
 		
-		$message = "Dear " . $this->truncateString ( $parameters ['mpesa_sender'] ) . ", your MPESA payment of KES " . number_format ( $parameters ['mpesa_amt'] ) . " received.Use Verification code " . $parameters ['verificationCode'] . ".Thank-you for your business.";
-		// echo $message;
+		$message = "Dear " . $this->truncateString ( $parameters ['mpesa_sender'] ) . " MPESA payment of KES " . 
+		number_format ( $parameters ['mpesa_amt'] ) . " to ".$till['business_name']." confirmed.Own a prime plot at Ruiru/Kamulu/Rongai/Kitengela by raising ".
+		"10% balance financed upto 2yrs.0721797962 ";
 		
 		if ($parameters ['mpesa_msisdn']) {
 			$phone = $this->format_IPNnumber ( $parameters ['mpesa_msisdn'] );
@@ -143,6 +148,7 @@ class Paybill extends CI_Controller {
 		} else {
 			echo " sms not sent to customer";
 		}
+
 	}
 	function truncateString($content) {
 		$truncated = "";
