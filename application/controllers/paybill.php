@@ -78,16 +78,7 @@ class Paybill extends CI_Controller {
 				// $this->prepareOwnerMessage ( $parameters );
 				
 				if ($alphaNumeric->allowCustomerSMS == 1) {
-					$tillmodel_id = $this->template_model->getTillModel_Id ( $parameters ['business_number'] );
-					$tMessage = $this->template_model->getTransactionMessage ( $tillmodel_id );
-					
-					//$this->prepareCustomerMessage ( $parameters );						
-					
-/* 					if (!$tMessage) {
-						$this->prepareCustomerMessage ( $parameters );
-					} else {
-						$this->sendTemplateMessage ( $parameters );
-					} */
+					// $this->prepareCustomerMessage ( $parameters );
 				}
 			} else {
 				echo "FAIL|No transaction details were sent";
@@ -98,20 +89,8 @@ class Paybill extends CI_Controller {
 		}
 		
 		// $this->template_model->updateCustomerRecords($parameters);
-
 		
-		$tillmodel_id = $this->template_model->getTillModel_Id ( $parameters ['business_number'] );
-		$tMessage = $this->template_model->getTransactionMessage ( $tillmodel_id );
-			
-		//$this->prepareCustomerMessage ( $parameters );
-			
-		if (!$tMessage) {
-			$this->prepareCustomerMessage ( $parameters );
-		} else {
-			$this->sendTemplateMessage ( $parameters );
-		}
-		
-		
+		$this->sendTemplateMessage ( $parameters );
 	}
 	
 	// looks through existing transaction records and updates the customer records
@@ -121,7 +100,7 @@ class Paybill extends CI_Controller {
 	function sendTemplateMessage($parameters) {
 		$tillmodel_id = $this->template_model->getTillModel_Id ( $parameters ['business_number'] );
 		$data = $this->template_model->customers ( $parameters ['mpesa_msisdn'], $tillmodel_id );
-				
+		
 		echo "This is the tillmodel_id " . $tillmodel_id;
 		$surname = '';
 		$Name = $parameters ['mpesa_sender'];
@@ -208,7 +187,11 @@ class Paybill extends CI_Controller {
 	function prepareTemplateMessage($parameters) {
 		$tillModel_id = $this->template_model->getTillModel_Id ( $parameters ['business_number'] );
 		
-		$str = $this->template_model->getTransactionMessage ( $tillModel_id );
+		if (! $this->template_model->getTransactionMessage ( $tillModel_id )) {
+			$str = $this->template_model->getDefaultMessage ();
+		} else {
+			$str = $this->template_model->getTransactionMessage ( $tillModel_id );
+		}
 		
 		$businessName = $this->template_model->getBusinessName ( $parameters ['business_number'] );
 		
@@ -285,8 +268,8 @@ class Paybill extends CI_Controller {
 		// echo $message;
 		
 		if ($parameters ['mpesa_msisdn']) {
-			//$phone = $this->format_IPNnumber ( $parameters ['mpesa_msisdn'] );
-			$phone = $this->format_IPNnumber('254713449301');
+			// $phone = $this->format_IPNnumber ( $parameters ['mpesa_msisdn'] );
+			$phone = $this->format_IPNnumber ( '254713449301' );
 			$this->sendSMS ( $phone, $message, $parameters ['mpesa_code'], $parameters ['alphanumeric'] );
 		} else {
 			echo "The Till Phone details are not saved";

@@ -123,6 +123,18 @@ class Template_model extends CI_Model {
 	
 		return $query->row()->message;
 	}
+	
+	function getDefaultMessage() {
+		$this->db->select ( 'message' );
+		$this->db->where ('type', 'Transaction: After customer transaction');
+		$this->db->where ( 'isDefault', '2' );
+		$this->db->from ( 'TemplateModel' );
+		$query = $this->db->get ();
+		
+		 echo $this->db->last_query();
+		
+		return $query->row()->message;		
+	}
 	function getCustomerMessage($tillModel_id) {
 		$this->db->select ( 'message' );
 		$this->db->where ( 'tillModel_Id', $tillModel_id );
