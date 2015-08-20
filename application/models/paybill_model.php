@@ -77,11 +77,12 @@ class Paybill_model extends CI_Model {
 	function getipnaddress($business_number) {
 		$this->db->query ( 'Use mobileBanking' );
 		
-		$this->db->select ( 'ipn_address,tillModel_id,username,password' );
+		$this->db->select ( 'ipn_address,till_model_id,username,password' );
 		$this->db->from ( 'IPN_details' );
-		$this->db->join ( 'TillModel', 'TillModel.id = IPN_details.tillModel_id', 'INNER' );
+		$this->db->join ( 'TillModel', 'TillModel.id = IPN_details.till_model_id', 'INNER' );
 		$this->db->where ( 'business_number', $business_number );
 		$query = $this->db->get ();
+		
 		
 		if ($query->num_rows () > 0) {
 			//print_r($query->row());
@@ -100,12 +101,9 @@ class Paybill_model extends CI_Model {
 		$this->db->join ( 'TillModel', 'TillModel.id = Alphanumeric.tillModel_id', 'INNER' );
 		$this->db->where ( 'business_number', $business_number );
 		$query = $this->db->get ();
-	
-		if ($query->num_rows () > 0) {
-			return $query->row ();
-		} else {
-			return false;
-		}
+		
+// 		echo $this->db->last_query();
+		return $query->row ();
 	}
 	
 	function inseripnlog($ipnlog) {
@@ -118,6 +116,7 @@ class Paybill_model extends CI_Model {
 			return false;
 		}
 	}
+	
 	function random_string($length = 4) {
 		$firstPart = substr ( str_shuffle ( "ABCDEFGHIJKLMNOPQRSTUVWXYZ" ), 0, 2 );
 		// Generate random 4 character string

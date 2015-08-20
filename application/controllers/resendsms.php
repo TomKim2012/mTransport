@@ -40,7 +40,13 @@ class ResendSms extends CI_Controller {
 		$smsInput = $this->corescripts->_send_sms2 ( $phoneNo, $message, "PioneerFSA" );
 		$transactionId = $mpesaCode;
 		$messageId = $smsInput['messageId'];
-		$status = $smsInput['status'];
+	
+		if ($smsInput['status'] = NULL) {
+			$status = 'Failed';
+		}
+		else {
+			$status = $smsInput['status'];			
+		}
 		$cost = $smsInput['cost'];
 		
 //		echo "messageId>>".$messageId."status>>".$status;
