@@ -38,22 +38,30 @@ class Member_Model extends CI_Model {
 					'businessName' => $row ['businessName'] 
 			);
 			array_push ( $businessNos, $data );
+
 		}
 		return $businessNos;
 	}
-	function getOwner_by_id($businessNo) {
+	function getOwner_by_id($businessNo,$accountNo) {
 		$query = $this->db->query ( "select businessName,phoneNo from TillModel" . " where business_number='" . $businessNo . "'" );
 		//echo $this->db->last_query();
+
 		if ($query->num_rows () > 0) {
-			return $query->row_array ();
+			return $query->row_array();
 		} else {
-			return false;
+			$query2 = $this->db->query ( "select businessName,phoneNo from TillModel" . " where mpesa_acc='" . $accountNo . "'");
+			echo $this->db->last_query();
+			if ($query2->num_rows () > 0) {
+			    return $query2->row_array ();
+			}else{
+				return false;
+			}
 		}
 	}
 	/*
 	 * Total for a single Till
 	 */
-	function getTillTotal($businessNo) {
+	function getTillTotal($businessNo,$accountNo) {
 		$this->db->query ( 'Use mobileBanking' );
 		$this->db->select_sum ( 'mpesa_amt' );
 		$this->db->where ( array (
@@ -63,10 +71,22 @@ class Member_Model extends CI_Model {
 		$query = $this->db->get ( 'LipaNaMpesaIPN' );
 		$amount = $query->row ()->mpesa_amt;
 		
-		// echo $this->db->last_query();
+
+		if($amount==0){			
+			$this->db->query ( 'Use mobileBanking' );
+			$this->db->select_sum ( 'mpesa_amt' );
+			$this->db->where ( array (
+					'business_number' => $businessNo,
+					'mpesa_acc'=>$accountNo,
+					'mpesa_trx_date' => date ( "j/n/y" ) 
+			) );
+			$query = $this->db->get ( 'LipaNaMpesaIPN' );
+			$amount = $query->row ()->mpesa_amt;
+		}
 		
 		return number_format ( $amount );
 	}
+
 	function getTotals($businessNos) {
 		$response = array ();
 		$this->db->query ( 'Use mobileBanking' );

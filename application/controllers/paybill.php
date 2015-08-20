@@ -129,8 +129,10 @@ class Paybill extends CI_Controller {
 		// Send SMS to Client
 		$tDate = date ( "d/m/Y" );
 		$tTime = date ( "h:i A" );
-		$till = $this->members->getOwner_by_id ( $parameters ['business_number'] );
-		$balance = $this->members->getTillTotal ( $parameters ['business_number'] );
+
+		echo "Account No:". $parameters['mpesa_acc'];
+		$till = $this->members->getOwner_by_id ( $parameters ['business_number'],$parameters['mpesa_acc']);
+		$balance = $this->members->getTillTotal ( $parameters ['business_number'],$parameters['mpesa_acc']);
 		
 		$message = "Dear " . $this->truncateString ( $till ['businessName'] ) . ", transaction " . $parameters ['mpesa_code'] . " of " . number_format ( $parameters ['mpesa_amt'] ) . " received from " . $this->truncateString ( $parameters ['mpesa_sender'] ) . " on " . $tDate . " at " . $tTime . ". New Till balance is Ksh " . $balance;
 		
@@ -156,15 +158,15 @@ class Paybill extends CI_Controller {
 		$till = $this->members->getOwner_by_id ( $parameters ['business_number'] );
 		$firstName = $this->getFirstName ( $parameters ['mpesa_sender'] );
 
-		$message = "Dear " . $firstName . " MPESA payment of " . 
+		$message = "Dear " . $firstName . " MPESA payment of Ksh." . 
 		number_format ( $parameters ['mpesa_amt'] ) . " to ".$this->truncateString ( $till ['businessName'] )." confirmed.";
 
 		$marketing_message = "Own a prime plot by raising 10% deposit,pay balance in 2yrs. Offer:Kamulu 349K,Kitengela Acacia 549K, Ruiru Murera 499K, Rongai Tuala 499K. 0724391213";
 		
 		if ($parameters ['mpesa_msisdn']) {
 			$phone = $this->format_IPNnumber ( $parameters ['mpesa_msisdn'] );
-			$this->sendSMS ( $phone, $message, $parameters ['mpesa_code'], $parameters ['alphanumeric'] );
-			$this->sendSMS ( $phone, $marketing_message, $parameters ['mpesa_code'], $parameters ['alphanumeric'] );
+			//$this->sendSMS ( $phone, $message, $parameters ['mpesa_code'], $parameters ['alphanumeric'] );
+			//$this->sendSMS ( $phone, $marketing_message, $parameters ['mpesa_code'], $parameters ['alphanumeric'] );
 		} else {
 			echo "The Till Phone details are not saved";
 		}
