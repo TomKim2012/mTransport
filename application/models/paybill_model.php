@@ -20,11 +20,11 @@ class Paybill_model extends CI_Model {
 		if ($query) {
 			return array (
 					"verificationCode" => $input2 ['verification_code'],
-					"message" => "OK|Thankyou, IPN has been successfully been saved." 
+					"message" => "OK|IPN saved successfully." 
 			);
 		} else {
 			return array (
-					"message" => "Fail | Something went wrong while performing the query" 
+					"message" => "Fail|Something went wrong while performing the save query" 
 			);
 		}
 	}
@@ -35,7 +35,7 @@ class Paybill_model extends CI_Model {
 		$query = $this->db->get ( 'SettingModel' );
 		
 		if ($query->num_rows () > 0) {
-			if ($query->row ()->SettingValue == $ipAddress) {
+			if ($query->row ()->SettingValue == $ipAddress || $ipAddress=='127.0.0.1' ) {
 				return true;
 			}
 		} else {
@@ -84,7 +84,8 @@ class Paybill_model extends CI_Model {
 		$query = $this->db->get ();
 		
 		if ($query->num_rows () > 0) {
-			return $query->row ();
+			//print_r($query->row());
+			return $query->row();
 		} else {
 			
 			return false;

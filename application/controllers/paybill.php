@@ -39,16 +39,34 @@ class Paybill extends CI_Controller {
 		 */
 		if ($parameters ['business_number'] == '510513' || $parameters ['business_number'] == '510511' || 
 			$parameters ['business_number'] == '510510' || $parameters ['business_number'] == '510512') {
+			
+			echo "OK|";
+
+		} else if($parameters ['business_number'] == '510514'){
+
+			if($parameters ['mpesa_acc'] == '2500'){
+				$ipnAddress = $this->transaction->getipnaddress ( $parameters ['mpesa_acc'] );
+				$this->performClientIPN ( $ipnAddress, $parameters );
+			}
+
+			/*
+			 * Should be sorted asap
+			 * we are making account number to be the same as business number because Pioneer's integration does not take
+			 * into consideration empty account Number;
+			 */
+		} else if($parameters ['business_number'] == '898467'){
+			// Send message to customer who deposited.
 			$firstName = $this->getFirstName ( $parameters ['mpesa_sender'] ); // JOASH NYADUNDO
 			$phoneNumber = $this->format_number ( $parameters ['mpesa_msisdn'] );
-			
-			// Send message to customer who deposited.
-			$message = "Dear " . $firstName . ", MPESA deposit of " . $parameters ['mpesa_amt'] . 
-			"Own a prime plot by raising 10% deposit,pay balance in 24months.Offer:Kamulu 349K,Ruiru 499K,Rongai 599K.0705300035";
-			$message = "Dear " . $firstName . ", MPESA deposit of " . $parameters ['mpesa_amt'] ."Own a Prime Plot in Ruiru with a deposit of  KSh.50k and 25k monthly Installment for 24 Months. 0705300035";
+			$message = "Dear " . $firstName . ", MPESA payment of KES" . $parameters ['mpesa_amt'] . 
+			" received. Thank-you for your business.";
+			$sms_feedback = $this->corescripts->_send_sms2 ( $phoneNumber, $message, 'Esolar_Shop' );
+			$parameters['alphanumeric']='Esolar_Shop';
+			$this->prepareOwnerMessage ( $parameters );
+			echo "Success";
+			return;
 
-			$sms_feedback = $this->corescripts->_send_sms2 ( $phoneNumber, $message );
-		} else {
+		}else {
 			/*
 			 * Should be sorted asap
 			 * we are making account number to be the same as business number because Pioneer's integration does not take
@@ -66,7 +84,7 @@ class Paybill extends CI_Controller {
 				echo $response ['message'];
 				$parameters ['verificationCode'] = $response ['verificationCode'];
 				
-				$ipnAddress = $this->transaction->getipnaddress ( $parameters ['business_number'] );
+				//$ipnAddress = $this->transaction->getipnaddress ( $parameters ['business_number'] );
 				$alphaNumeric = $this->transaction->getAlphanumeric ( $parameters ['business_number'] );
 				
 				if (isset ( $alphaNumeric->alphanumeric )) {
@@ -100,6 +118,13 @@ class Paybill extends CI_Controller {
 		$customString = substr ( $firstName, 0, 1 ) . strtolower ( substr ( $firstName, 1 ) );
 		return $customString;
 	}
+
+
+	function format_Number($phoneNumber) {
+		$formatedNumber = "0" . substr ( $phoneNumber, 3 );
+		return $formatedNumber;
+	}
+
 	function prepareOwnerMessage($parameters) {
 		// Send SMS to Client
 		$tDate = date ( "d/m/Y" );
@@ -107,9 +132,9 @@ class Paybill extends CI_Controller {
 		$till = $this->members->getOwner_by_id ( $parameters ['business_number'] );
 		$balance = $this->members->getTillTotal ( $parameters ['business_number'] );
 		
-		$message = "Dear " . $this->truncateString ( $till ['businessName'] ) . ", transaction " . $parameters ['mpesa_code'] . " of Kshs. " . number_format ( $parameters ['mpesa_amt'] ) . " received from " . $this->truncateString ( $parameters ['mpesa_sender'] ) . " on " . $tDate . " at " . $tTime . ". New Till balance is Ksh " . $balance;
+		$message = "Dear " . $this->truncateString ( $till ['businessName'] ) . ", transaction " . $parameters ['mpesa_code'] . " of " . number_format ( $parameters ['mpesa_amt'] ) . " received from " . $this->truncateString ( $parameters ['mpesa_sender'] ) . " on " . $tDate . " at " . $tTime . ". New Till balance is Ksh " . $balance;
 		
-		echo $parameters ['alphanumeric'];
+		//echo $parameters ['alphanumeric'];
 		if ($till ['phoneNo']) {
 			$this->sendSMS ( $till ['phoneNo'], $message, $parameters ['mpesa_code'], $parameters ['alphanumeric'] );
 		} else {
@@ -120,15 +145,26 @@ class Paybill extends CI_Controller {
 		// Send SMS to Client
 		$tDate = date ( "d/m/Y" );
 		$tTime = date ( "h:i A" );
+
+		/*
+		 For purposes of the second business Number;
+		*/
+		if($parameters['business_number']=='510514'){
+				$parameters['business_number']=$parameters['mpesa_acc'];
+		}
+
 		$till = $this->members->getOwner_by_id ( $parameters ['business_number'] );
-		
-		$message = "Dear " . $this->truncateString ( $parameters ['mpesa_sender'] ) . " MPESA payment of KES " . 
-		number_format ( $parameters ['mpesa_amt'] ) . " to ".$till['business_name']." confirmed.Own a prime plot at Ruiru/Kamulu/Rongai/Kitengela by raising ".
-		"10% balance financed upto 2yrs.0721797962 ";
+		$firstName = $this->getFirstName ( $parameters ['mpesa_sender'] );
+
+		$message = "Dear " . $firstName . " MPESA payment of " . 
+		number_format ( $parameters ['mpesa_amt'] ) . " to ".$this->truncateString ( $till ['businessName'] )." confirmed.";
+
+		$marketing_message = "Own a prime plot by raising 10% deposit,pay balance in 2yrs. Offer:Kamulu 349K,Kitengela Acacia 549K, Ruiru Murera 499K, Rongai Tuala 499K. 0724391213";
 		
 		if ($parameters ['mpesa_msisdn']) {
 			$phone = $this->format_IPNnumber ( $parameters ['mpesa_msisdn'] );
 			$this->sendSMS ( $phone, $message, $parameters ['mpesa_code'], $parameters ['alphanumeric'] );
+			$this->sendSMS ( $phone, $marketing_message, $parameters ['mpesa_code'], $parameters ['alphanumeric'] );
 		} else {
 			echo "The Till Phone details are not saved";
 		}
@@ -149,15 +185,15 @@ class Paybill extends CI_Controller {
 		if ($smsInput ['status']) {
 			echo " and sms sent to customer";
 		} else {
-			echo " sms not sent to customer";
+			echo " Failed to send sms";
 		}
 
 	}
 	
 	function truncateString($content) {
 		$truncated = "";
-		if (strlen ( $content ) > 15) {
-			$truncated = substr ( $content, 0, 15 ) . "** ";
+		if (strlen ( $content ) > 7) {
+			$truncated = substr ( $content, 0, 7 ) . "** ";
 		} else {
 			$truncated = $content;
 		}
