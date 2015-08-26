@@ -41,8 +41,9 @@ class Member_Model extends CI_Model {
 		}
 		return $businessNos;
 	}
-	function getOwner_by_id($businessNo) {
-		$query = $this->db->query ( "select businessName,phoneNo from TillModel" . " where business_number='" . $businessNo . "'" );
+	function getOwner_by_id($parameters) {
+		$query = $this->db->query ( "select businessName,phoneNo from TillModel" . " where business_number='" . 
+				$parameters ['business_number'] . "' or mpesa_acc='".$parameters['mpesa_acc'] );
 		if ($query->num_rows () > 0) {
 			return $query->row_array ();
 		} else {
@@ -52,13 +53,14 @@ class Member_Model extends CI_Model {
 	/*
 	 * Total for a single Till
 	 */
-	function getTillTotal($businessNo) {
+	function getTillTotal($parameters) {
 		$this->db->query ( 'Use mobileBanking' );
 		$this->db->select_sum ( 'mpesa_amt' );
 		$this->db->where ( array (
-				'business_number' => $businessNo,
+				'business_number' => $parameters ['business_number'],
 				'mpesa_trx_date' => date ( "j/n/y" ) 
 		) );
+		//'mpesa_acc' => $parameters ['mpesa_acc'],
 		$query = $this->db->get ( 'LipaNaMpesaIPN' );
 		$amount = $query->row ()->mpesa_amt;
 		
@@ -109,12 +111,12 @@ class Member_Model extends CI_Model {
 		$query = "select DISTINCT(transactions.business_number),tills.ownerId,users.phone,users.firstName, clientdoc.clientcode" . " from LipaNaMpesaIPN as transactions " . " Inner Join TillModel as tills ON (transactions.business_number=tills.business_number)" . " Inner Join BUser as users ON (tills.ownerId=users.userId)" . " Inner Join MergeFinals.dbo.clientdoc as clientdoc ON(tills.business_number=clientdoc.docnum)" . " where DATEPART(YYYY,tstamp)='" . $year . "' and" . " DATEPART(MM,tstamp)='" . $month . "' and " . " DATEPART(DD,tstamp)='" . $day . "'
 				";
 		
-		//echo $query;
+		// echo $query;
 		
 		$query = $this->db->query ( $query );
 		$output = $query->result_array ();
 		
-		//print_r ( $output );
+		// print_r ( $output );
 		
 		return $output;
 	}
