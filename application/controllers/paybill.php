@@ -37,35 +37,15 @@ class Paybill extends CI_Controller {
 		/**
 		 * **********************************
 		 */
-		if ($parameters ['business_number'] == '510513' || $parameters ['business_number'] == '510511' || 
-			$parameters ['business_number'] == '510510' || $parameters ['business_number'] == '510512') {
-			
-			echo "OK|";
-
-		} else if($parameters ['business_number'] == '510514'){
-
-			if($parameters ['mpesa_acc'] == '2500'){
-				$ipnAddress = $this->transaction->getipnaddress ( $parameters ['mpesa_acc'] );
-				$this->performClientIPN ( $ipnAddress, $parameters );
-			}
-
-			/*
-			 * Should be sorted asap
-			 * we are making account number to be the same as business number because Pioneer's integration does not take
-			 * into consideration empty account Number;
-			 */
-		} else if($parameters ['business_number'] == '898467'){
-			// Send message to customer who deposited.
-			$firstName = $this->getFirstName ( $parameters ['mpesa_sender'] ); // JOASH NYADUNDO
-			$phoneNumber = $this->format_number ( $parameters ['mpesa_msisdn'] );
-			$message = "Dear " . $firstName . ", MPESA payment of KES" . $parameters ['mpesa_amt'] . 
-			" received. Thank-you for your business.";
-			$sms_feedback = $this->corescripts->_send_sms2 ( $phoneNumber, $message, 'Esolar_Shop' );
-			$parameters['alphanumeric']='Esolar_Shop';
-			$this->prepareOwnerMessage ( $parameters );
-			echo "Success";
+		if ($parameters ['business_number'] == '885850') {
 			return;
+		}
 
+		if($parameters ['business_number'] == '510514'){
+			$parameters ['business_number'] = $parameters ['mpesa_acc'];
+		}else if ($parameters ['business_number'] == '510513' || $parameters ['business_number'] == '510511' || 
+			$parameters ['business_number'] == '510510' || $parameters ['business_number'] == '510512') { 
+			
 		}else {
 			/*
 			 * Should be sorted asap
@@ -132,7 +112,7 @@ class Paybill extends CI_Controller {
 		$till = $this->members->getOwner_by_id ( $parameters ['business_number'] );
 		$balance = $this->members->getTillTotal ( $parameters ['business_number'] );
 		
-		$message = "Dear " . $this->truncateString ( $till ['businessName'] ) . ", transaction " . $parameters ['mpesa_code'] . " of " . number_format ( $parameters ['mpesa_amt'] ) . " received from " . $this->truncateString ( $parameters ['mpesa_sender'] ) . " on " . $tDate . " at " . $tTime . ". New Till balance is Ksh " . $balance;
+		$message = "Dear " .  $till ['businessName'] . ", transaction " . $parameters ['mpesa_code'] . " of Ksh." . number_format ( $parameters ['mpesa_amt'] ) . " received from " . $parameters ['mpesa_sender'] . " on " . $tDate . " at " . $tTime . ". New Till balance is Ksh " . $balance;
 		
 		//echo $parameters ['alphanumeric'];
 		if ($till ['phoneNo']) {
@@ -145,28 +125,27 @@ class Paybill extends CI_Controller {
 		// Send SMS to Client
 		$tDate = date ( "d/m/Y" );
 		$tTime = date ( "h:i A" );
-
-		/*
-		 For purposes of the second business Number;
-		*/
-		if($parameters['business_number']=='510514'){
-				$parameters['business_number']=$parameters['mpesa_acc'];
-		}
-
 		$till = $this->members->getOwner_by_id ( $parameters ['business_number'] );
 		$firstName = $this->getFirstName ( $parameters ['mpesa_sender'] );
 
-		$message = "Dear " . $firstName . " MPESA payment of " . 
-		number_format ( $parameters ['mpesa_amt'] ) . " to ".$this->truncateString ( $till ['businessName'] )." confirmed.";
+		if ($parameters ['business_number'] == '898467'){
+			return;
+		}
 
-		$marketing_message = "Own a prime plot by raising 10% deposit,pay balance in 2yrs. Offer:Kamulu 349K,Kitengela Acacia 549K, Ruiru Murera 499K, Rongai Tuala 499K. 0724391213";
-		
-		if ($parameters ['mpesa_msisdn']) {
+		if ($parameters ['business_number'] == '510513' || $parameters ['business_number'] == '510511' || 
+			$parameters ['business_number'] == '510510' || $parameters ['business_number'] == '510512') {
+			$message=$firstName.",MPESA deposit of ".number_format($parameters['mpesa_amt'])." confirmed.".
+					"Own a plot by raising 10% deposit, pay balance in upto 2yrs.Offer: Kamulu 399K, Rongai 995K,0705300035";
+			$phone = $this->format_IPNnumber ( $parameters ['mpesa_msisdn'] );
+			$this->sendSMS ( $phone, $message, $parameters ['mpesa_code'], $parameters ['alphanumeric'] );
+			
+		}else{
+			$message = "Dear " . $firstName . " MPESA payment of Ksh." . 
+			number_format ( $parameters ['mpesa_amt'] ) . " to ".$till ['businessName'] ." confirmed.";
+			$marketing_message = "Pioneer FSA Special offer on plots! Own a prime plot by raising 10% deposit, pay balance in upto 2yrs. Kamulu 399K, Rongai Commercial Plots 995K. 0724391213";
 			$phone = $this->format_IPNnumber ( $parameters ['mpesa_msisdn'] );
 			$this->sendSMS ( $phone, $message, $parameters ['mpesa_code'], $parameters ['alphanumeric'] );
 			$this->sendSMS ( $phone, $marketing_message, $parameters ['mpesa_code'], $parameters ['alphanumeric'] );
-		} else {
-			echo "The Till Phone details are not saved";
 		}
 	}
 	

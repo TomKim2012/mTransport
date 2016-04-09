@@ -106,7 +106,7 @@ class Member_Model extends CI_Model {
 		$day = '02';
 		$month = '01';
 		
-		$query = "select DISTINCT(transactions.business_number),tills.ownerId,users.phone,users.firstName, clientdoc.clientcode" . " from LipaNaMpesaIPN as transactions " . " Inner Join TillModel as tills ON (transactions.business_number=tills.business_number)" . " Inner Join BUser as users ON (tills.ownerId=users.userId)" . " Inner Join MergeFinals.dbo.clientdoc as clientdoc ON(tills.business_number=clientdoc.docnum)" . " where DATEPART(YYYY,tstamp)='" . $year . "' and" . " DATEPART(MM,tstamp)='" . $month . "' and " . " DATEPART(DD,tstamp)='" . $day . "'
+		$query = "select DISTINCT(transactions.business_number),tills.ownerId,users.phone,users.firstName, clientdoc.clientcode" . " from LipaNaMpesaIPN as transactions " . " Inner Join TillModel as tills ON (transactions.business_number=tills.business_number)" . " Inner Join BUser as users ON (tills.ownerId=users.userId)" . " Inner Join mergefinalss.dbo.clientdoc as clientdoc ON(tills.business_number=clientdoc.docnum)" . " where DATEPART(YYYY,tstamp)='" . $year . "' and" . " DATEPART(MM,tstamp)='" . $month . "' and " . " DATEPART(DD,tstamp)='" . $day . "'
 				";
 		
 		//echo $query;
@@ -119,7 +119,7 @@ class Member_Model extends CI_Model {
 		return $output;
 	}
 	function getCustTransaction($customerId, $transactionId) {
-		$this->db->query ( 'Use MergeFinals' );
+		$this->db->query ( 'Use mergefinalss' );
 		$rs = $this->db->query ( 'SELECT Dbo.SP_GetBalances(\'' . $customerId . '\',' . $transactionId . ') AS balance' );
 		$balance = $rs->row ()->balance;
 		return $balance;

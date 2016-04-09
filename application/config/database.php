@@ -76,10 +76,28 @@
 | the query builder class.
 */
 
-$active_group = 'default';
+$active_group = 'local_windows_sqlsrv';
 $query_builder = TRUE;
 
-$db['default'] = array(
+
+
+$db['local_windows_sqlsrv']['username'] = 'TomKim';
+$db['local_windows_sqlsrv']['password'] = 'g11taru09!';
+$db['local_windows_sqlsrv']['database'] = 'mobileBanking';
+$db['local_windows_sqlsrv']['hostname'] = '(local)\cloud2012';
+$db['local_windows_sqlsrv']['dbdriver'] = 'sqlsrv';
+$db['local_windows_sqlsrv']['dbprefix'] = '';
+$db['local_windows_sqlsrv']['pconnect'] = FALSE;
+$db['local_windows_sqlsrv']['db_debug'] = TRUE;
+$db['local_windows_sqlsrv']['cache_on'] = FALSE;
+$db['local_windows_sqlsrv']['cachedir'] = '';
+$db['local_windows_sqlsrv']['char_set'] = 'utf8';
+$db['local_windows_sqlsrv']['dbcollat'] = 'utf8_general_ci';
+$db['local_windows_sqlsrv']['swap_pre'] = '';
+$db['local_windows_sqlsrv']['autoinit'] = TRUE;
+$db['local_windows_sqlsrv']['stricton'] = FALSE;
+
+/*$db['default'] = array(
 	'dsn'	=> '',
 	'hostname' => '(local)',
 	'username' => '',
@@ -100,7 +118,7 @@ $db['default'] = array(
 	'stricton' => FALSE,
 	'failover' => array(),
 	'active_r' => TRUE
-);
+);*/
 
 /* End of file database.php */
 /* Location: ./application/config/database.php */

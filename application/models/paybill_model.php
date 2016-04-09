@@ -9,8 +9,11 @@ class Paybill_model extends CI_Model {
 		} else {
 			$input ['isApproved'] = false;
 		}
-		
+
+
 		$query = $this->db->insert ( 'LipaNaMpesaIPN', $input );
+		
+		
 		$input2 = array (
 				'transaction_id' => $input ['id'],
 				'verification_code' => $this->random_string ( 5 ) 
