@@ -54,15 +54,16 @@ class Member_Model extends CI_Model {
 	 */
 	function getTillTotal($businessNo) {
 		$this->db->query ( 'Use mobileBanking' );
-		$this->db->select_sum ( 'mpesa_amt' );
-		$this->db->where ( array (
-				'business_number' => $businessNo,
-				'mpesa_trx_date' => date ( "j/n/y" ) 
-		) );
-		$query = $this->db->get ( 'LipaNaMpesaIPN' );
+
+		$query = "select SUM(mpesa_amt) as mpesa_amt from LipaNaMpesaIPN 
+					where DAY(tstamp)=".date('d')." and month(tstamp)="
+					.date('m')." and YEAR(tstamp)=".date('Y').
+					" and business_number='".$businessNo."'";
+		$query = $this->db->query ($query);
+		
 		$amount = $query->row ()->mpesa_amt;
 		
-		// echo $this->db->last_query();
+		//echo $this->db->last_query();
 		
 		return number_format ( $amount );
 	}
