@@ -13,49 +13,70 @@ class PaybillV2 extends CI_Controller {
 	
 	function index() {
 		$request_body = file_get_contents('php://input');
-		$json_parameters = json_decode ( $request_body, true );
+		$json_parameters = json_decode ( $request_body, true );		
 		
-		print_r($json_parameters);
-		die();
-		
+		//FullNames
+		$fullNames = $json_parameters['KYCInfoList'][0]['KYCValue'].' '.$json_parameters['KYCInfoList'][1]['KYCValue'];
+		if(sizeof($json_parameters[ 'KYCInfoList'])==3){
+			$fullNames = $fullNames.' '.$json_parameters[ 'KYCInfoList'][2]['KYCValue'];
+		}
+
+		//Time-stamp
+		//receiving this:20140227082020 
+		//what it should be:2015-08-13 13:19:11.000	
+		$allDate = $json_parameters[ 'TransTime' ];
+
+		//Date
+		$year = substr($json_parameters[ 'TransTime' ],0,4);
+		$month = substr($json_parameters[ 'TransTime' ],4,2);
+		$day = substr($json_parameters[ 'TransTime' ],6,2);
+		$hour = substr($json_parameters[ 'TransTime' ],8,2);
+		$minute = substr($json_parameters[ 'TransTime' ],10,2);
+		$seconds = substr($json_parameters[ 'TransTime' ],12,2);
+
+		$tstampFormat= $year.'-'.$month.'-'.$day.' '.$hour.':'.$minute.':'.$seconds;
+
 		/**
 		 * Extract IPN Parameters
 		 */
 		$parameters = array (
-				'id' => $this->input->get ( 'id' ),
-				'business_number' => $this->input->get ( 'business_number' ),
-				'orig' => $this->input->get ( 'orig' ),
-				'dest' => $this->input->get ( 'dest' ),
-				'tstamp' => $this->input->get ( 'tstamp' ),
-				'mpesa_code' => $this->input->get ( 'mpesa_code' ),
-				'mpesa_acc' => $this->input->get ( 'mpesa_acc' ),
-				'mpesa_msisdn' => $this->input->get ( 'mpesa_msisdn' ),
-				'mpesa_trx_date' => $this->input->get ( 'mpesa_trx_date' ),
-				'mpesa_trx_time' => $this->input->get ( 'mpesa_trx_time' ),
-				'mpesa_amt' => $this->input->get ( 'mpesa_amt' ),
-				'mpesa_sender' => $this->input->get ( 'mpesa_sender' ),
+				'id' => $json_parameters['Id'],
+				'business_number' =>$json_parameters['BusinessShortCode'],
+				'tstamp' =>$tstampFormat,
+				'mpesa_trx_date'=>$day.'/'.$month.'/'.substr($year, 2,2),
+				'mpesa_trx_time'=>$hour.':'.$minute.':'.$seconds,
+				'mpesa_code' => $json_parameters[ 'TransID'],
+				'mpesa_acc' => $json_parameters['BillRefNumber'],
+				'mpesa_msisdn' => $json_parameters[ 'MSISDN'],
+				'mpesa_amt' => $json_parameters[ 'TransAmount' ],
+				'mpesa_sender' =>strtoupper($fullNames),
 				'ipAddress' => $this->input->ip_address () 
 		);
-		
-		$user = $this->input->get ( 'user' );
-		$pass = $this->input->get ( 'pass' );
-		
-		/**
-		 * **********************************
-		 */
-		if ($parameters ['business_number'] == '885850') {
-			return;
-		}
-		
-		if ($parameters ['business_number'] == '510514') {
-			$parameters ['business_number'] = $parameters ['mpesa_acc'];
-		} else if ($parameters ['business_number'] == '510513' || $parameters ['business_number'] == '510511' || $parameters ['business_number'] == '510510' || $parameters ['business_number'] == '510512') {
-		} else {
-			/*
-			 * Should be sorted asap
-			 * we are making account number to be the same as business number because Pioneer's integration does not take
-			 * into consideration empty account Number;
-			 */
+
+
+		//Log the details	
+	   $myFile = "application/controllers/mpesalog.txt";
+        write_file($myFile, "\n=============================\n",'a+');
+        if(!write_file($myFile, print_r($request_body, true),'a+')){
+     	  echo "Unable to write to file!";
+     	}
+     	//die();
+        //foreach ($json_parameters as $var => $value) {
+     	//   if(!write_file($myFile, "$var = $value\n",'a+')){
+     	//   echo "Unable to write to file!";
+     	//   }
+        //}
+    	
+
+		$user = 'pioneerfsa';
+		$pass = 'transport@2014';
+
+
+		//Business number is equal to account number in Lipa Na Mpesa tills
+		if ($parameters ['business_number'] == '510513' || $parameters ['business_number'] == '510511' || 
+			$parameters ['business_number'] == '510510' || $parameters ['business_number'] == '510512' || 
+			$parameters ['business_number'] == '510514') { 
+		}else {
 			$parameters ['mpesa_acc'] = $parameters ['business_number'];
 		}
 		
@@ -71,7 +92,7 @@ class PaybillV2 extends CI_Controller {
 				// $ipnAddress = $this->transaction->getipnaddress ( $parameters ['business_number'] );
 				$alphaNumeric = $this->transaction->getAlphanumeric ( $parameters ['business_number'] );
 				
-				if (isset ( $alphaNumeric->alphanumeric )) {
+				if (isset ($alphaNumeric->alphanumeric )) {
 					$parameters ['alphanumeric'] = $alphaNumeric->alphanumeric;
 				} else {
 					$parameters ['alphanumeric'] = "PioneerFSA";
@@ -84,11 +105,6 @@ class PaybillV2 extends CI_Controller {
 				$this->prepareOwnerMessage ( $parameters );
 				$this->prepareCustomerMessage ( $parameters );
 				
-				/*
-				 * if ($alphaNumeric->allowCustomerSMS == 1) {
-				 * $this->prepareCustomerMessage ( $parameters );
-				 * }
-				 */
 			} else {
 				echo "FAIL|No transaction details were sent";
 			}
@@ -111,10 +127,23 @@ class PaybillV2 extends CI_Controller {
 		// Send SMS to Client
 		$tDate = date ( "d/m/Y" );
 		$tTime = date ( "h:i A" );
-		$till = $this->members->getOwner_by_id ( $parameters ['business_number'] );
-		$balance = $this->members->getTillTotal ( $parameters ['business_number'] );
+
+		// if($parameters ['business_number'] == '510514'){
+		// 	$parameters['business_number']=$parameters['mpesa_acc'];
+		// }
+
+		$till = $this->members->getOwner_by_id ( $parameters ['mpesa_acc'] );
+
+		if($parameters ['business_number'] == '510514'){
+			$balance = $this->members->getTillTotal ( $parameters ['business_number'],$parameters ['mpesa_acc'] );
+		}else{
+			$balance = $this->members->getTillTotal ( $parameters ['business_number'],null);
+		}
 		
-		$message = "Dear " . $till ['businessName'] . ", transaction " . $parameters ['mpesa_code'] . " of Ksh." . number_format ( $parameters ['mpesa_amt'] ) . " received from " . $parameters ['mpesa_sender'] . " on " . $tDate . " at " . $tTime . ". New Till balance is Ksh " . $balance;
+		
+		$message = "Dear " . $till ['businessName'] . ", transaction " . $parameters ['mpesa_code'] . " of Ksh." .
+		 number_format ( $parameters ['mpesa_amt'] ) . " received from " . $parameters ['mpesa_sender'] . " on " . $tDate . " at " . $tTime . ". New Till balance is Ksh " . 
+		 $balance;
 		
 		// echo $parameters ['alphanumeric'];
 		if ($till ['phoneNo']) {
@@ -127,23 +156,26 @@ class PaybillV2 extends CI_Controller {
 		// Send SMS to Client
 		$tDate = date ( "d/m/Y" );
 		$tTime = date ( "h:i A" );
+		if($parameters ['business_number'] == '510514'){
+			$parameters['business_number']=$parameters['mpesa_acc'];
+		}
+
 		$till = $this->members->getOwner_by_id ( $parameters ['business_number'] );
 		$firstName = $this->getFirstName ( $parameters ['mpesa_sender'] );
-		
 		if ($parameters ['business_number'] == '898467') {
 			return;
 		}
 		
 		if ($parameters ['business_number'] == '510513' || $parameters ['business_number'] == '510511' || $parameters ['business_number'] == '510510' || $parameters ['business_number'] == '510512') {
-			$message = $firstName . ",MPESA deposit of " . number_format ( $parameters ['mpesa_amt'] ) . " confirmed." . "Own a plot by raising 10% deposit, pay balance in upto 2yrs.Offer: Kamulu 399K, Rongai 995K,0705300035";
+			$message = $firstName . ",MPESA deposit of " . number_format ( $parameters ['mpesa_amt'] ) . " confirmed." . " Own a prime plot by raising 10% deposit, pay balance in upto 2yrs. Offer: Kitengela 499K, Rongai 799K.0705300035";
 			$phone = $this->format_IPNnumber ( $parameters ['mpesa_msisdn'] );
 			$this->sendSMS ( $phone, $message, $parameters ['mpesa_code'], $parameters ['alphanumeric'] );
-		} else {
-			$message = "Dear " . $firstName . " MPESA payment of Ksh." . number_format ( $parameters ['mpesa_amt'] ) . " to " . $till ['businessName'] . " confirmed.";
-			$marketing_message = "Pioneer FSA Special offer on plots! Own a prime plot by raising 10% deposit, pay balance in upto 2yrs. Kamulu 399K, Rongai Commercial Plots 995K. 0724391213";
+		}else {
+			$message = "Dear " . $firstName . " transaction ".$parameters['mpesa_code']." of Ksh." . number_format ( $parameters ['mpesa_amt'] ) . " to " . $till ['businessName'] . " confirmed.For queries call 0705300035. Pioneer FSA";
+			$marketing_message = "Pioneer FSA Special offer on plots! Raise 10% deposit and own a plot on offer at Kamulu 379K, Rongai 895K, pay balance in 24 months.0705300035";
 			$phone = $this->format_IPNnumber ( $parameters ['mpesa_msisdn'] );
-			$this->sendSMS ( $phone, $message, $parameters ['mpesa_code'], $parameters ['alphanumeric'] );
-			$this->sendSMS ( $phone, $marketing_message, $parameters ['mpesa_code'], $parameters ['alphanumeric'] );
+			//$this->sendSMS ( $phone, $message, $parameters ['mpesa_code'], $parameters ['alphanumeric'] );
+			//$this->sendSMS ( $phone, $marketing_message, $parameters ['mpesa_code'], $parameters ['alphanumeric'] );
 		}
 	}
 	function sendSMS($phoneNo, $message, $mpesaCode, $alphaNumeric) {
