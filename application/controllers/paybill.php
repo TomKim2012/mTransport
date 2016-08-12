@@ -12,6 +12,11 @@ class Paybill extends CI_Controller {
 	}
 
 	function index() {
+		
+			
+		$smsInput = $this->corescripts->_send_sms2 ( '0704489471', 'Test Message', 'AFRICASTKNG');
+		die();
+		
 		/**
 		 * Extract IPN Parameters
 		 */

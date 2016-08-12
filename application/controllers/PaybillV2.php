@@ -5,14 +5,18 @@ class PaybillV2 extends CI_Controller {
 	function PaybillV2() {
 		parent::__construct ();
 		date_default_timezone_set ( 'Africa/Nairobi' );
-		$this->load->library ( 'CoreScripts' );
-		$this->load->model ( 'Paybill_model', 'transaction' );
-		$this->load->model ( 'Member_model', 'members' );
 		$this->load->helper ( 'file' );
 	}
 	function index() {
+		
 		$request_body = file_get_contents ( 'php://input' );
-		$json_parameters = json_decode ( $request_body, true );
+		
+		$pos = strpos($request_body,"{");
+		$clean_json  = substr($request_body,$pos)."}";
+		echo "clean json>>>>".$clean_json;
+		
+		$json_parameters = json_decode ( $clean_json, true );
+		//print_r("Json Parameters>>>".utf8_decode($request_body));
 		
 		// FullNames
 		$fullNames = $json_parameters ['KYCInfoList'] [0] ['KYCValue'] . ' ' . $json_parameters ['KYCInfoList'] [1] ['KYCValue'];
@@ -52,53 +56,20 @@ class PaybillV2 extends CI_Controller {
 				'ipAddress' => $this->input->ip_address () 
 		);
 		
-		// Log the details
+		$getipnaddress="http://localhost:8080/icpakportal/api/transactions/payment";
+		$this->performClientIPN ( $getipnaddress, $parameters );
+		
+		
+		
+		// Write the transaction to file
 		$myFile = "application/controllers/mpesalog.txt";
 		write_file ( $myFile, "\n=============================\n", 'a+' );
 		if (! write_file ( $myFile, print_r ( $request_body, true ), 'a+' )) {
 			echo "Unable to write to file!";
 		}
-		// die();
-		// foreach ($json_parameters as $var => $value) {
-		// if(!write_file($myFile, "$var = $value\n",'a+')){
-		// echo "Unable to write to file!";
-		// }
-		// }
 		
-		$user = 'pioneerfsa';
-		$pass = 'transport@2014';
+		//print_r($parameters);
 		
-		/**
-		 * Saving Parameters on successful Authentication
-		 */
-		if (($user == 'pioneerfsa' && $pass == 'financial@2013') || ($user = 'mTransport' && $pass = 'transport@2014')) {
-			if ($parameters ['id']) {
-				$response = $this->transaction->record_transaction ( $parameters );
-				echo $response ['message'];
-				$parameters ['verificationCode'] = $response ['verificationCode'];
-				
-				// $ipnAddress = $this->transaction->getipnaddress ( $parameters ['business_number'] );
-				$alphaNumeric = $this->transaction->getAlphanumeric ( $parameters ['business_number'] );
-				
-				if (isset ( $alphaNumeric->alphanumeric )) {
-					$parameters ['alphanumeric'] = $alphaNumeric->alphanumeric;
-				} else {
-					$parameters ['alphanumeric'] = "PioneerFSA";
-				}
-				
-				if (! empty ( $ipnAddress )) {
-					// $this->performClientIPN ( $getipnaddress, $parameters );
-				}
-				// Owner's Message
-				$this->prepareOwnerMessage ( $parameters );
-				$this->prepareCustomerMessage ( $parameters );
-			} else {
-				echo "FAIL|No transaction details were sent";
-			}
-		} else {
-			echo "FAIL|The payment could not be completed at this time.
-					Incorrect username / password combination. Pioneer FSA";
-		}
 	}
 	function getFirstName($names) {
 		$fullNames = explode ( " ", $names );
@@ -210,14 +181,11 @@ class PaybillV2 extends CI_Controller {
 		$this->transaction->updateLog ( $messageId, $status );
 	}
 	function httpPost($getipndetails, $params, $attempt) {
-		$url = $getipndetails->ipn_address;
-		$ipn_id = $getipndetails->tillModel_id;
-		$username = $getipndetails->username;
-		$password = $getipndetails->password;
+		$url = $getipndetails;
 		
 		// username and password in params
-		$params ['user'] = $username;
-		$params ['pass'] = $password;
+		//$params ['user'] = $username;
+		//$params ['pass'] = $password;
 		
 		$postData = '';
 		// create name value pairs seperated by &
@@ -245,37 +213,40 @@ class PaybillV2 extends CI_Controller {
 				$desc = $response;
 				$status = "Successful";
 			}
-		} else {
-			
+		} else {		
 			$info = curl_getinfo ( $ch );
 			$http_status = curl_errno ( $ch );
 			$desc = curl_error ( $ch );
 			$status = "Not Successful";
 		}
 		
-		$inplog = array (
-				'ipn_id' => $ipn_id,
-				'status' => $status,
-				'description' => $desc,
-				'http_status' => $http_status,
-				'attempt' => $attempt 
-		);
+		// $inplog = array (
+				// 'ipn_id' => $ipn_id,
+				// 'status' => $status,
+				// 'description' => $desc,
+				// 'http_status' => $http_status,
+				// 'attempt' => $attempt 
+		// );
+		
+		echo "Successful";
 		
 		curl_close ( $ch );
 		
-		if ($this->transaction->inseripnlog ( $inplog )) {
-			if ($http_status == 200) {
-				return true;
-			} else {
-				if ($attempt == 4) {
-					return true;
-				} else {
-					return false;
-				}
-			}
-		} else {
-			return false;
-		}
+		// if ($this->transaction->inseripnlog ( $inplog )) {
+			// if ($http_status == 200) {
+				// return true;
+			// } else {
+				// if ($attempt == 4) {
+					// return true;
+				// } else {
+					// return false;
+				// }
+			// }
+		// } else {
+			// return false;
+		// }
+		
+		return true;
 	}
 }
 
